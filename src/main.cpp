@@ -1,8 +1,9 @@
-#include "Body.hpp"
+#include "Agent.hpp"
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
 #include <cmath>
 #include <cstdlib>
+#include <random>
 
 using namespace bouncers;
 
@@ -33,95 +34,82 @@ static void draw_circle(
     static const int N_POINTS = sizeof(offsets) / sizeof(*offsets);
     SDL_Point points[N_POINTS];
     for (int i = 0; i < N_POINTS; ++i) {
-        points[i].x = x + offsets[i].x * radius;
-        points[i].y = y + offsets[i].y * radius;
+        points[i].x = std::round(x + offsets[i].x * radius);
+        points[i].y = std::round(y + offsets[i].y * radius);
     }
     SDL_RenderDrawLines(renderer, points, N_POINTS);
 }
 
-static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius)
+static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
+    scalar screen_scale, int screen_origin_x, int screen_origin_y)
 {
-    draw_circle(renderer, body.x, body.y, radius);
-    scalar head_x = body.x + std::cos(body.ang) * radius;
-    scalar head_y = body.y + std::sin(body.ang) * radius;
-    SDL_RenderDrawLine(renderer, body.x, body.y, head_x, head_y);
+    scalar screen_x = body.x * screen_scale + screen_origin_x;
+    scalar screen_y = body.y * screen_scale + screen_origin_y;
+    scalar screen_radius = radius * screen_scale;
+    draw_circle(renderer, screen_x, screen_y, screen_radius);
+    scalar screen_head_x = screen_x + std::cos(body.ang) * screen_radius;
+    scalar screen_head_y = screen_y + std::sin(body.ang) * screen_radius;
+    SDL_RenderDrawLine(renderer, std::round(screen_x), std::round(screen_y),
+        std::round(screen_head_x), std::round(screen_head_y));
 }
 
 static void simulate(SDL_Renderer* renderer)
 {
     static const scalar RADIUS = 40;
-    static const int N_BODIES = 4;
-    Body bodies[N_BODIES];
-    for (int i = 0; i < N_BODIES; ++i) {
-        bodies[i].x = RADIUS + i * RADIUS * 4;
-        bodies[i].y = RADIUS + i * RADIUS * 4;
-        bodies[i].vel_x = 0;
-        bodies[i].vel_y = 0;
-        bodies[i].ang = 0;
-        bodies[i].vel_ang = -0.2;
+    static const int N_AGENTS = 4;
+    Agent agents[N_AGENTS];
+    std::random_device rand_dev;
+    std::minstd_rand rand(rand_dev());
+    std::uniform_real_distribution<scalar> real_dis(-1, 1);
+    auto randomize
+        = [rand, real_dis](scalar& w) mutable { w = real_dis(rand); };
+    for (int i = 0; i < N_AGENTS; ++i) {
+        for (int j = 0; j < Agent::MEMORY_SIZE; ++j) {
+            agents[i].memory[j] = 0;
+        }
+        agents[i].self_brain.for_each_weight(randomize);
+        agents[i].other_brain.for_each_weight(randomize);
+        agents[i].body.x = RADIUS + i * RADIUS * 4;
+        agents[i].body.y = RADIUS + i * RADIUS * 4;
+        agents[i].body.vel_x = 0;
+        agents[i].body.vel_y = 0;
+        agents[i].body.ang = 0;
+        agents[i].body.vel_ang = 0;
     }
-    bodies[0].vel_x = 2;
-    bodies[0].vel_y = 2.2;
-    bodies[0].vel_ang = 0.2;
-#if 0
-    bodies[1].vel_x = 1.6;
-    bodies[1].vel_y = -1.6;
-    bodies[1].vel_ang = 0.1;
-#endif
-    int key = 0;
-    bool move_forward = false, turn_left = false, turn_right = false;
     for (;;) {
         SDL_Event event;
         if (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == SDL_QUIT)
                 break;
-            } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-                switch (event.key.keysym.sym) {
-                case 'w':
-                    move_forward = event.type == SDL_KEYDOWN;
-                    break;
-                case 'a':
-                    turn_left = event.type == SDL_KEYDOWN;
-                    break;
-                case 'd':
-                    turn_right = event.type == SDL_KEYDOWN;
-                    break;
-                }
-            }
         }
-        if (move_forward) {
-            bodies[0].vel_x += std::cos(bodies[0].ang) * 0.09;
-            bodies[0].vel_y += std::sin(bodies[0].ang) * 0.09;
-        }
-        if (turn_left)
-            bodies[0].vel_ang -= 0.02;
-        if (turn_right)
-            bodies[0].vel_ang += 0.02;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        for (int i = 0; i < N_BODIES; ++i) {
-            draw_body(renderer, bodies[i], RADIUS);
+        for (int i = 0; i < N_AGENTS; ++i) {
+            draw_body(renderer, agents[i].body, RADIUS, 0.2, 512, 360);
         }
-        scalar lm_x = 0, lm_y = 0, am = 0, e = 0;
-        for (int i = 0; i < N_BODIES; ++i) {
+        for (int i = 0; i < N_AGENTS; ++i) {
+            agents[i].body.tick();
 #if 1
-            bodies[i].vel_x *= 0.99;
-            bodies[i].vel_y *= 0.99;
-            bodies[i].vel_ang *= 0.99;
+            agents[i].body.vel_x *= 0.95;
+            agents[i].body.vel_y *= 0.95;
+            agents[i].body.vel_ang *= 0.95;
 #endif
-            lm_x += bodies[i].vel_x;
-            lm_y += bodies[i].vel_y;
-            am += bodies[i].vel_ang;
-            e += bodies[i].vel_x * bodies[i].vel_x
-                + bodies[i].vel_y * bodies[i].vel_y
-                + RADIUS * bodies[i].vel_ang * RADIUS * bodies[i].vel_ang;
-            bodies[i].tick();
         }
-        printf("lm = (%f, %f), am = %f, e = %f\n", lm_x, lm_y, am, e);
-        for (int i = 0; i < N_BODIES; ++i) {
-            for (int j = i + 1; j < N_BODIES; ++j) {
-                bodies[i].collide(bodies[j], RADIUS);
+        for (int i = 0; i < N_AGENTS; ++i) {
+            for (int j = 0; j < i; ++j) {
+                agents[i].consider_other(agents[j]);
+            }
+            for (int j = i + 1; j < N_AGENTS; ++j) {
+                agents[i].consider_other(agents[j]);
+            }
+        }
+        for (int i = 0; i < N_AGENTS; ++i) {
+            agents[i].act(1, 0.05);
+        }
+        for (int i = 0; i < N_AGENTS; ++i) {
+            for (int j = i + 1; j < N_AGENTS; ++j) {
+                agents[i].body.collide(agents[j].body, RADIUS);
             }
         }
         SDL_RenderPresent(renderer);

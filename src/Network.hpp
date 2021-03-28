@@ -25,6 +25,20 @@ template <int N_IN, int N_MID, int N_OUT> struct Network {
             }
         }
     }
+
+    template <typename F> void for_each_weight(F& f)
+    {
+        for (int i = 0; i < N_MID; ++i) {
+            for (int j = 0; j < N_IN; ++j) {
+                f(this->mid_weights[i][j]);
+            }
+        }
+        for (int i = 0; i < N_OUT; ++i) {
+            for (int j = 0; j < N_MID; ++j) {
+                f(this->out_weights[i][j]);
+            }
+        }
+    }
 };
 
 } /* namespace bouncers */

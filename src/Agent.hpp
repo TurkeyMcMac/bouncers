@@ -9,21 +9,24 @@ namespace bouncers {
 
 struct Agent {
     static constexpr int MEMORY_SIZE = 5;
-    static constexpr int SELF_BRAIN_IN = MEMORY_SIZE + 2 + 2;
+    static constexpr int SELF_BRAIN_IN = MEMORY_SIZE + 2 + 2 + 1;
     static constexpr int SELF_BRAIN_MID = SELF_BRAIN_IN;
     static constexpr int SELF_BRAIN_OUT = MEMORY_SIZE + 2;
-    static constexpr int OTHER_BRAIN_IN = MEMORY_SIZE + 2 + 2 + 2;
+    static constexpr int OTHER_BRAIN_IN = MEMORY_SIZE + 2 + 2 + 1 + 1;
     static constexpr int OTHER_BRAIN_MID = OTHER_BRAIN_IN;
     static constexpr int OTHER_BRAIN_OUT = MEMORY_SIZE;
+
+    static constexpr scalar MEMORY_VAL_MIN = -1e10;
+    static constexpr scalar MEMORY_VAL_MAX = +1e10;
 
     scalar memory[MEMORY_SIZE];
     Network<SELF_BRAIN_IN, SELF_BRAIN_MID, SELF_BRAIN_OUT> self_brain;
     Network<OTHER_BRAIN_IN, OTHER_BRAIN_MID, OTHER_BRAIN_OUT> other_brain;
     Body body;
 
-    void consider_other(const Agent& other, scalar radius);
+    void consider_other(const Agent& other);
 
-    void act();
+    void act(scalar forward_speed, scalar turn_speed);
 };
 
 } /* namespace bouncers */
