@@ -1,11 +1,19 @@
 #include "Agent.hpp"
+#include "constants.hpp"
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
 #include <cmath>
 #include <cstdlib>
 #include <random>
+#include <utility>
 
 using namespace bouncers;
+
+static const scalar RADIUS = 40;
+static const scalar START_DIST = 400;
+static const int N_AGENTS = 12;
+static const int N_PARENTS = 11;
+static const int ROUND_DURATION = 270;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
@@ -53,48 +61,57 @@ static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
         std::round(screen_head_x), std::round(screen_head_y));
 }
 
-static void simulate(SDL_Renderer* renderer)
+static void make_random_agents(Agent agents[N_AGENTS], std::minstd_rand& rand)
 {
-    static const scalar RADIUS = 40;
-    static const int N_AGENTS = 4;
-    Agent agents[N_AGENTS];
-    std::random_device rand_dev;
-    std::minstd_rand rand(rand_dev());
     std::uniform_real_distribution<scalar> real_dis(-1, 1);
     auto randomize
         = [rand, real_dis](scalar& w) mutable { w = real_dis(rand); };
     for (int i = 0; i < N_AGENTS; ++i) {
+        agents[i].self_brain.for_each_weight(randomize);
+        agents[i].other_brain.for_each_weight(randomize);
+    }
+}
+
+static void place_agents(Agent agents[N_AGENTS])
+{
+    for (int i = 0; i < N_AGENTS; ++i) {
         for (int j = 0; j < Agent::MEMORY_SIZE; ++j) {
             agents[i].memory[j] = 0;
         }
-        agents[i].self_brain.for_each_weight(randomize);
-        agents[i].other_brain.for_each_weight(randomize);
-        agents[i].body.x = RADIUS + i * RADIUS * 4;
-        agents[i].body.y = RADIUS + i * RADIUS * 4;
+        scalar theta = TAU / N_AGENTS * i;
+        agents[i].body.x = std::cos(theta) * START_DIST;
+        agents[i].body.y = std::sin(theta) * START_DIST;
         agents[i].body.vel_x = 0;
         agents[i].body.vel_y = 0;
-        agents[i].body.ang = 0;
+        agents[i].body.ang = theta + PI;
         agents[i].body.vel_ang = 0;
     }
-    for (;;) {
+}
+
+static bool do_round(
+    SDL_Renderer* renderer, Agent agents[N_AGENTS], scalar scores[N_AGENTS])
+{
+    for (int i = 0; i < N_AGENTS; ++i) {
+        scores[i] = 0;
+    }
+    for (int t = 0; t < ROUND_DURATION; ++t) {
         SDL_Event event;
         if (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
-                break;
+                return false;
         }
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        for (int i = 0; i < N_AGENTS; ++i) {
-            draw_body(renderer, agents[i].body, RADIUS, 0.2, 512, 360);
+        if (renderer) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            for (int i = 0; i < N_AGENTS; ++i) {
+                draw_body(renderer, agents[i].body, RADIUS, 0.2, 512, 360);
+            }
+            draw_circle(renderer, 512, 360, 4);
+            draw_circle(renderer, 512, 360, START_DIST * 0.2);
         }
         for (int i = 0; i < N_AGENTS; ++i) {
             agents[i].body.tick();
-#if 1
-            agents[i].body.vel_x *= 0.95;
-            agents[i].body.vel_y *= 0.95;
-            agents[i].body.vel_ang *= 0.95;
-#endif
         }
         for (int i = 0; i < N_AGENTS; ++i) {
             for (int j = 0; j < i; ++j) {
@@ -103,6 +120,9 @@ static void simulate(SDL_Renderer* renderer)
             for (int j = i + 1; j < N_AGENTS; ++j) {
                 agents[i].consider_other(agents[j]);
             }
+#ifdef DEBUG
+            agents[i].act(1, 0.05);
+#endif
         }
         for (int i = 0; i < N_AGENTS; ++i) {
             agents[i].act(1, 0.05);
@@ -112,11 +132,63 @@ static void simulate(SDL_Renderer* renderer)
                 agents[i].body.collide(agents[j].body, RADIUS);
             }
         }
-        SDL_RenderPresent(renderer);
+        for (int i = 0; i < N_AGENTS; ++i) {
+            scalar dist = std::hypot(agents[i].body.x, agents[i].body.y);
+            scores[i] += (START_DIST - dist) * t;
+        }
+        if (renderer)
+            SDL_RenderPresent(renderer);
+    }
+    return true;
+}
+
+static void mutate_agent(Agent& agent, std::minstd_rand& rand)
+{
+    std::uniform_real_distribution<scalar> real_dis(-1, 1);
+    auto mutate = [rand, real_dis](scalar& w) mutable { w += real_dis(rand); };
+    agent.self_brain.for_each_weight(mutate);
+    agent.other_brain.for_each_weight(mutate);
+}
+
+static void new_generation(
+    Agent agents[N_AGENTS], scalar scores[N_AGENTS], std::minstd_rand& rand)
+{
+    // Selection sort to find the parents.
+    for (int i = 0; i < N_PARENTS; ++i) {
+        for (int j = i + 1; j < N_AGENTS; ++j) {
+            if (scores[j] > scores[i]) {
+                std::swap(scores[i], scores[j]);
+                std::swap(agents[i], agents[j]);
+                break;
+            }
+        }
+    }
+    // Make babies.
+    for (int i = N_PARENTS; i < N_AGENTS; ++i) {
+        int parent_idx = i % N_PARENTS;
+        agents[i] = agents[parent_idx];
+    }
+    for (int i = 0; i < N_AGENTS; ++i) {
+        mutate_agent(agents[i], rand);
     }
 }
 
-int main(void)
+static void simulate(SDL_Renderer* renderer, unsigned seed)
+{
+    Agent agents[N_AGENTS];
+    std::minstd_rand rand(seed);
+    make_random_agents(agents, rand);
+    for (long i = 0;; ++i) {
+        // printf("Round %ld\n", i);
+        scalar scores[N_AGENTS];
+        place_agents(agents);
+        if (!do_round(i % 500 == 0 ? renderer : NULL, agents, scores))
+            return;
+        new_generation(agents, scores, rand);
+    }
+}
+
+int main(int argc, char* argv[])
 {
     int status = EXIT_FAILURE;
     SDL_Window* window = NULL;
@@ -137,7 +209,7 @@ int main(void)
         fprintf(stderr, "SDL renderer creation failed; %s\n", SDL_GetError());
         goto error_create_surface;
     }
-    simulate(renderer);
+    simulate(renderer, argc >= 2 ? (unsigned)atoi(argv[1]) : 1337U);
     status = EXIT_SUCCESS;
     SDL_DestroyRenderer(renderer);
 error_create_surface:

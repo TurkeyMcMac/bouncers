@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstring>
 
+#include <iostream>
+
 using namespace bouncers;
 
 struct PolarCoord {
@@ -48,11 +50,23 @@ static scalar sigmoid(scalar x)
     }
 }
 
+static void clamp_memory(scalar memory[Agent::MEMORY_SIZE])
+{
+    for (int i = 0; i < Agent::MEMORY_SIZE; ++i) {
+        if (memory[i] < Agent::MEMORY_VAL_MIN) {
+            memory[i] = Agent::MEMORY_VAL_MIN;
+        } else if (memory[i] > Agent::MEMORY_VAL_MAX) {
+            memory[i] = Agent::MEMORY_VAL_MAX;
+        }
+    }
+}
+
 void Agent::consider_other(const Agent& other)
 {
     scalar in[Agent::OTHER_BRAIN_IN], out[Agent::OTHER_BRAIN_OUT];
+    clamp_memory(this->memory);
     // Put the memory in the input.
-    std::memcpy(in, &this->memory, sizeof(this->memory));
+    std::memcpy(in, this->memory, sizeof(this->memory));
     // Put the relative position in the input.
     PolarCoord other_pos
         = get_polar_pos(this->body, other.body.x, other.body.y);
@@ -72,21 +86,20 @@ void Agent::consider_other(const Agent& other)
     this->other_brain.compute(in, out);
     // Remember.
     std::memcpy(&this->memory, out, sizeof(this->memory));
+#ifdef DEBUG
+    for (int i = 0; i < Agent::OTHER_BRAIN_OUT; ++i) {
+        std::cout << i << ' ' << out[i] << std::endl;
+    }
+    std::cout << std::endl;
+#endif
 }
 
 void Agent::act(scalar forward_speed, scalar turn_speed)
 {
-    scalar in[Agent::OTHER_BRAIN_IN], out[Agent::OTHER_BRAIN_OUT];
-    // Make sure no dangerous values are present in memory.
-    for (int i = 0; i < Agent::MEMORY_SIZE; ++i) {
-        if (this->memory[i] < Agent::MEMORY_VAL_MIN) {
-            this->memory[i] = Agent::MEMORY_VAL_MIN;
-        } else if (this->memory[i] > Agent::MEMORY_VAL_MAX) {
-            this->memory[i] = Agent::MEMORY_VAL_MAX;
-        }
-    }
+    scalar in[Agent::SELF_BRAIN_IN], out[Agent::SELF_BRAIN_OUT];
+    clamp_memory(this->memory);
     // Put the memory in the input.
-    std::memcpy(in, &this->memory, sizeof(this->memory));
+    std::memcpy(in, this->memory, sizeof(this->memory));
     // Put the offset from the origin in the input.
     PolarCoord offset = get_polar_pos(this->body, 0, 0);
     in[Agent::MEMORY_SIZE + 0] = offset.ang;
@@ -101,13 +114,31 @@ void Agent::act(scalar forward_speed, scalar turn_speed)
     in[Agent::MEMORY_SIZE + 4] = this->body.vel_ang;
     // Compute.
     this->self_brain.compute(in, out);
+#ifdef DEBUG
+    for (int i = 0; i < Agent::SELF_BRAIN_OUT; ++i) {
+        std::cout << i << ' ' << out[i] << std::endl;
+    }
+#endif
     // Remember.
     std::memcpy(&this->memory, out, sizeof(this->memory));
     // Move.
     scalar out_forward = out[Agent::MEMORY_SIZE + 0];
+    if (std::isnan(out_forward))
+        out_forward = 0;
+#ifdef DEBUG
+    std::cout << "Forward " << out_forward << std::endl;
+#endif
     scalar out_turn = out[Agent::MEMORY_SIZE + 1];
+    if (std::isnan(out_turn))
+        out_turn = 0;
+#ifdef DEBUG
+    std::cout << "Turn " << out_turn << std::endl;
+#endif
     scalar forward = sigmoid(out_forward) * forward_speed * 2 - forward_speed;
     this->body.vel_x += std::cos(this->body.ang) * forward;
     this->body.vel_y += std::sin(this->body.ang) * forward;
     this->body.vel_ang += sigmoid(out_turn) * turn_speed * 2 - turn_speed;
+#ifdef DEBUG
+    std::abort();
+#endif
 }

@@ -16,8 +16,8 @@ struct Agent {
     static constexpr int OTHER_BRAIN_MID = OTHER_BRAIN_IN;
     static constexpr int OTHER_BRAIN_OUT = MEMORY_SIZE;
 
-    static constexpr scalar MEMORY_VAL_MIN = -1e10;
-    static constexpr scalar MEMORY_VAL_MAX = +1e10;
+    static constexpr scalar MEMORY_VAL_MIN = -1e5;
+    static constexpr scalar MEMORY_VAL_MAX = +1e5;
 
     scalar memory[MEMORY_SIZE];
     Network<SELF_BRAIN_IN, SELF_BRAIN_MID, SELF_BRAIN_OUT> self_brain;
