@@ -50,21 +50,9 @@ static scalar sigmoid(scalar x)
     }
 }
 
-static void clamp_memory(scalar memory[Agent::MEMORY_SIZE])
-{
-    for (int i = 0; i < Agent::MEMORY_SIZE; ++i) {
-        if (memory[i] < Agent::MEMORY_VAL_MIN) {
-            memory[i] = Agent::MEMORY_VAL_MIN;
-        } else if (memory[i] > Agent::MEMORY_VAL_MAX) {
-            memory[i] = Agent::MEMORY_VAL_MAX;
-        }
-    }
-}
-
 void Agent::consider_other(const Agent& other)
 {
     scalar in[Agent::OTHER_BRAIN_IN], out[Agent::OTHER_BRAIN_OUT];
-    clamp_memory(this->memory);
     // Put the memory in the input.
     std::memcpy(in, this->memory, sizeof(this->memory));
     // Put the relative position in the input.
@@ -97,7 +85,6 @@ void Agent::consider_other(const Agent& other)
 void Agent::act(scalar forward_speed, scalar turn_speed)
 {
     scalar in[Agent::SELF_BRAIN_IN], out[Agent::SELF_BRAIN_OUT];
-    clamp_memory(this->memory);
     // Put the memory in the input.
     std::memcpy(in, this->memory, sizeof(this->memory));
     // Put the offset from the origin in the input.
