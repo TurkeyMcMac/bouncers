@@ -3,8 +3,6 @@
 #include <cmath>
 #include <cstring>
 
-#include <iostream>
-
 using namespace bouncers;
 
 struct PolarCoord {
@@ -74,12 +72,6 @@ void Agent::consider_other(const Agent& other)
     this->other_brain.compute(in, out);
     // Remember.
     std::memcpy(&this->memory, out, sizeof(this->memory));
-#ifdef DEBUG
-    for (int i = 0; i < Agent::OTHER_BRAIN_OUT; ++i) {
-        std::cout << i << ' ' << out[i] << std::endl;
-    }
-    std::cout << std::endl;
-#endif
 }
 
 void Agent::act(scalar forward_speed, scalar turn_speed)
@@ -101,31 +93,17 @@ void Agent::act(scalar forward_speed, scalar turn_speed)
     in[Agent::MEMORY_SIZE + 4] = this->body.vel_ang;
     // Compute.
     this->self_brain.compute(in, out);
-#ifdef DEBUG
-    for (int i = 0; i < Agent::SELF_BRAIN_OUT; ++i) {
-        std::cout << i << ' ' << out[i] << std::endl;
-    }
-#endif
     // Remember.
     std::memcpy(&this->memory, out, sizeof(this->memory));
     // Move.
     scalar out_forward = out[Agent::MEMORY_SIZE + 0];
     if (std::isnan(out_forward))
         out_forward = 0;
-#ifdef DEBUG
-    std::cout << "Forward " << out_forward << std::endl;
-#endif
     scalar out_turn = out[Agent::MEMORY_SIZE + 1];
     if (std::isnan(out_turn))
         out_turn = 0;
-#ifdef DEBUG
-    std::cout << "Turn " << out_turn << std::endl;
-#endif
-    scalar forward = sigmoid(out_forward) * forward_speed * 2 - forward_speed;
+    scalar forward = sigmoid(out_forward) * forward_speed;
     this->body.vel_x += std::cos(this->body.ang) * forward;
     this->body.vel_y += std::sin(this->body.ang) * forward;
     this->body.vel_ang += sigmoid(out_turn) * turn_speed * 2 - turn_speed;
-#ifdef DEBUG
-    std::abort();
-#endif
 }

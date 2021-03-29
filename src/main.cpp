@@ -9,11 +9,11 @@
 
 using namespace bouncers;
 
-static const scalar RADIUS = 40;
-static const scalar START_DIST = 300;
-static const int N_AGENTS = 10;
-static const int N_PARENTS = 7;
-static const int ROUND_DURATION = 320;
+static const scalar RADIUS = 100;
+static const scalar START_DIST = 600;
+static const int N_AGENTS = 12;
+static const int N_PARENTS = 8;
+static const int ROUND_DURATION = 300;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
@@ -63,7 +63,7 @@ static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
 
 static void make_random_agents(Agent agents[N_AGENTS], std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-10, 10);
+    std::uniform_real_distribution<scalar> real_dis(-1, 1);
     auto randomize
         = [&rand, &real_dis](scalar& w) mutable { w = real_dis(rand); };
     for (int i = 0; i < N_AGENTS; ++i) {
@@ -121,12 +121,9 @@ static bool do_round(
             for (int j = i + 1; j < N_AGENTS; ++j) {
                 agents[i].consider_other(agents[j]);
             }
-#ifdef DEBUG
-            agents[i].act(1, 0.05);
-#endif
         }
         for (int i = 0; i < N_AGENTS; ++i) {
-            agents[i].act(1, 0.05);
+            agents[i].act(1, 0.01);
         }
         for (int i = 0; i < N_AGENTS; ++i) {
             for (int j = i + 1; j < N_AGENTS; ++j) {
@@ -134,8 +131,8 @@ static bool do_round(
             }
         }
         for (int i = 0; i < N_AGENTS; ++i) {
-            scalar dist = std::hypot(agents[i].body.x, agents[i].body.y);
-            scores[i] += (START_DIST - dist) * t;
+            scores[i]
+                += 1 / (1 + std::hypot(agents[i].body.x, agents[i].body.y));
         }
         if (renderer)
             SDL_RenderPresent(renderer);
@@ -145,7 +142,7 @@ static bool do_round(
 
 static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-0.1, 0.1);
+    std::uniform_real_distribution<scalar> real_dis(-0.15, 0.15);
     auto mutate
         = [&rand, &real_dis](scalar& w) mutable { w = +real_dis(rand); };
     agent.self_brain.for_each_weight(mutate);
