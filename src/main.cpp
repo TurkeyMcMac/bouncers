@@ -10,10 +10,10 @@
 using namespace bouncers;
 
 static const scalar RADIUS = 40;
-static const scalar START_DIST = 400;
-static const int N_AGENTS = 12;
-static const int N_PARENTS = 11;
-static const int ROUND_DURATION = 270;
+static const scalar START_DIST = 300;
+static const int N_AGENTS = 10;
+static const int N_PARENTS = 7;
+static const int ROUND_DURATION = 320;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
@@ -63,9 +63,9 @@ static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
 
 static void make_random_agents(Agent agents[N_AGENTS], std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-1, 1);
+    std::uniform_real_distribution<scalar> real_dis(-10, 10);
     auto randomize
-        = [rand, real_dis](scalar& w) mutable { w = real_dis(rand); };
+        = [&rand, &real_dis](scalar& w) mutable { w = real_dis(rand); };
     for (int i = 0; i < N_AGENTS; ++i) {
         agents[i].self_brain.for_each_weight(randomize);
         agents[i].other_brain.for_each_weight(randomize);
@@ -101,6 +101,7 @@ static bool do_round(
                 return false;
         }
         if (renderer) {
+            SDL_Delay(20);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -144,8 +145,9 @@ static bool do_round(
 
 static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-1, 1);
-    auto mutate = [rand, real_dis](scalar& w) mutable { w += real_dis(rand); };
+    std::uniform_real_distribution<scalar> real_dis(-0.1, 0.1);
+    auto mutate
+        = [&rand, &real_dis](scalar& w) mutable { w = +real_dis(rand); };
     agent.self_brain.for_each_weight(mutate);
     agent.other_brain.for_each_weight(mutate);
 }
@@ -179,7 +181,8 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
     for (long i = 0;; ++i) {
-        // printf("Round %ld\n", i);
+        if (i % 10 == 0)
+            printf("Round %ld\n", i);
         scalar scores[N_AGENTS];
         place_agents(agents);
         if (!do_round(i % 500 == 0 ? renderer : NULL, agents, scores))
