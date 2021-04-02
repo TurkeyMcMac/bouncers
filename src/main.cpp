@@ -142,15 +142,14 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
         std::thread threads[MAX_THREADS];
         std::atomic<int> place(0);
+        auto thread_fun = [&agents, &place]() {
+            int i;
+            while ((i = place.fetch_add(2)) + 1 < N_AGENTS) {
+                breed_winner(NULL, agents + i);
+            }
+        };
         for (int i = 0; i < n_threads; ++i) {
-            new (&threads[i]) std::thread(
-                [&agents](std::atomic<int>* place) {
-                    int j;
-                    while ((j = place->fetch_add(2)) + 1 < N_AGENTS) {
-                        breed_winner(NULL, agents + j);
-                    }
-                },
-                &place);
+            new (&threads[i]) std::thread(thread_fun);
         }
         if (t % 500 == 0) {
             keep_going = breed_winner(renderer, visualized_agents);
