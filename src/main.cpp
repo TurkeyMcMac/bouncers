@@ -92,20 +92,6 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
         }
         for (int i = 0; i < 2; ++i) {
             my_agents[i].act(my_agents[1 - i].body, 1, 0.1);
-#if 0
-            if (renderer)
-                printf("%d: %f\n", i, my_agents[i].memory[0]);
-            if (std::isnan(my_agents[i].body.vel_x)
-                || std::isnan(my_agents[i].body.vel_y)
-                || std::isnan(my_agents[i].body.ang)) {
-                if (renderer) {
-                    puts("NaN!");
-                    SDL_Delay(1000);
-                }
-                winner = 1 - i;
-                goto end;
-            }
-#endif
         }
         my_agents[0].body.collide(my_agents[1].body, RADIUS);
         for (int i = 0; i < 2; ++i) {
