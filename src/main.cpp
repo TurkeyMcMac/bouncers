@@ -144,7 +144,8 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         std::atomic<int> place(0);
         auto thread_fun = [&agents, &place]() {
             int i;
-            while ((i = place.fetch_add(2)) + 1 < N_AGENTS) {
+            while ((i = place.fetch_add(2, std::memory_order_relaxed)) + 1
+                < N_AGENTS) {
                 breed_winner(NULL, agents + i);
             }
         };
