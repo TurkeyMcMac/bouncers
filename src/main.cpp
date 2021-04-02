@@ -3,9 +3,11 @@
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <random>
+#include <thread>
 
 using namespace bouncers;
 
@@ -13,13 +15,13 @@ static const scalar RADIUS = 120;
 static const scalar START_DIST = 500;
 static const int N_AGENTS = 50;
 static const int ROUND_DURATION = 600;
+static const int MAX_THREADS = 128;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
 {
     static const int N_POINTS = 32;
     SDL_Point points[N_POINTS];
-    const int n_points = N_POINTS;
     for (int i = 0; i < N_POINTS - 1; ++i) {
         scalar theta = TAU / (N_POINTS - 1) * i;
         points[i].x = std::round(x + std::cos(theta) * radius);
@@ -68,13 +70,14 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
     my_agents[1].body.y = 0;
     my_agents[1].body.ang = PI;
     for (int t = 0; t < ROUND_DURATION; ++t) {
-        Uint32 ticks = SDL_GetTicks();
-        SDL_Event event;
-        if (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT)
-                return false;
-        }
+        Uint32 ticks = 0;
         if (renderer) {
+            ticks = SDL_GetTicks();
+            SDL_Event event;
+            if (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT)
+                    return false;
+            }
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -131,14 +134,33 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     Agent agents[N_AGENTS];
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
-    for (long t = 0;; ++t) {
+    bool keep_going = true;
+    for (long t = 0; keep_going; ++t) {
         if (t % 10 == 0)
             printf("Round %ld\n", t);
-        // TODO: parallelize
-        for (int i = 0; i < N_AGENTS; i += 2) {
-            SDL_Renderer* r = t % 500 == 0 && i == 0 ? renderer : NULL;
-            if (!breed_winner(r, agents + i))
-                return;
+        Agent visualized_agents[2] = { agents[0], agents[1] };
+        int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
+        std::thread threads[MAX_THREADS];
+        std::atomic<int> place(0);
+        for (int i = 0; i < n_threads; ++i) {
+            new (&threads[i]) std::thread(
+                [&agents](std::atomic<int>* place) {
+                    int j;
+                    while ((j = place->fetch_add(2)) + 1 < N_AGENTS) {
+                        breed_winner(NULL, agents + j);
+                    }
+                },
+                &place);
+        }
+        if (t % 500 == 0) {
+            keep_going = breed_winner(renderer, visualized_agents);
+        } else {
+            SDL_Event event;
+            if (SDL_PollEvent(&event))
+                keep_going = event.type != SDL_QUIT;
+        }
+        for (int i = 0; i < n_threads; ++i) {
+            threads[i].join();
         }
         for (int i = 0; i < N_AGENTS; ++i) {
             mutate_agent(agents[i], rand);

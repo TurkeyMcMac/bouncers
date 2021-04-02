@@ -1,7 +1,7 @@
 exe = bouncers
 CPPFLAGS = `sdl2-config --cflags`
 CXXFLAGS = -std=c++14 -Wall -Wextra -pedantic
-LDLIBS = `sdl2-config --libs`
+LDLIBS = `sdl2-config --libs` -latomic -lpthread
 
 CXX ?= c++
 RM ?= rm -f
