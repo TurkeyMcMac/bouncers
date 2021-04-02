@@ -9,7 +9,6 @@ struct Body {
     scalar x, y;
     scalar vel_x, vel_y;
     scalar ang;
-    scalar vel_ang;
 
     void tick();
 

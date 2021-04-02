@@ -2,49 +2,30 @@
 #include "constants.hpp"
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <random>
-#include <utility>
 
 using namespace bouncers;
 
-static const scalar RADIUS = 100;
-static const scalar START_DIST = 600;
-static const int N_AGENTS = 12;
-static const int N_PARENTS = 8;
-static const int ROUND_DURATION = 300;
+static const scalar RADIUS = 120;
+static const scalar START_DIST = 500;
+static const int N_AGENTS = 50;
+static const int ROUND_DURATION = 600;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
 {
-    static const struct {
-        scalar x, y;
-    } offsets[] = {
-        { 1, 0 },
-        { .92387953251127686560, .38268343236511364957 },
-        { .70710678118651097377, .70710678118658407502 },
-        { .38268343236501813819, .92387953251131642770 },
-        { 0, 1 },
-        { -.38268343236520916094, .92387953251123730349 },
-        { -.70710678118665717626, .70710678118643787253 },
-        { -.92387953251135598981, .38268343236492262682 },
-        { -1, 0 },
-        { -.92387953251119774138, -.38268343236530467232 },
-        { -.70710678118636477129, -.70710678118673027750 },
-        { -.38268343236482711544, -.92387953251139555192 },
-        { 0, -1 },
-        { .38268343236540018370, -.92387953251115817927 },
-        { .70710678118680337874, -.70710678118629167005 },
-        { .92387953251143511403, -.38268343236473160406 },
-        { 1, 0 },
-    };
-    static const int N_POINTS = sizeof(offsets) / sizeof(*offsets);
+    static const int N_POINTS = 32;
     SDL_Point points[N_POINTS];
-    for (int i = 0; i < N_POINTS; ++i) {
-        points[i].x = std::round(x + offsets[i].x * radius);
-        points[i].y = std::round(y + offsets[i].y * radius);
+    const int n_points = N_POINTS;
+    for (int i = 0; i < N_POINTS - 1; ++i) {
+        scalar theta = TAU / (N_POINTS - 1) * i;
+        points[i].x = std::round(x + std::cos(theta) * radius);
+        points[i].y = std::round(y + std::sin(theta) * radius);
     }
+    points[N_POINTS - 1] = points[0];
     SDL_RenderDrawLines(renderer, points, N_POINTS);
 }
 
@@ -63,113 +44,100 @@ static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
 
 static void make_random_agents(Agent agents[N_AGENTS], std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-1, 1);
+    std::uniform_real_distribution<scalar> real_dis(-0.1, 0.1);
     auto randomize
         = [&rand, &real_dis](scalar& w) mutable { w = real_dis(rand); };
     for (int i = 0; i < N_AGENTS; ++i) {
-        agents[i].self_brain.for_each_weight(randomize);
-        agents[i].other_brain.for_each_weight(randomize);
-    }
-}
-
-static void place_agents(Agent agents[N_AGENTS])
-{
-    for (int i = 0; i < N_AGENTS; ++i) {
-        for (int j = 0; j < Agent::MEMORY_SIZE; ++j) {
-            agents[i].memory[j] = 0;
-        }
-        scalar theta = TAU / N_AGENTS * i;
-        agents[i].body.x = std::cos(theta) * START_DIST;
-        agents[i].body.y = std::sin(theta) * START_DIST;
+        agents[i].brain.for_each_weight(randomize);
+        agents[i].body.x = 0;
+        agents[i].body.y = 0;
         agents[i].body.vel_x = 0;
         agents[i].body.vel_y = 0;
-        agents[i].body.ang = theta + PI;
-        agents[i].body.vel_ang = 0;
+        agents[i].body.ang = 0;
     }
 }
 
-static bool do_round(
-    SDL_Renderer* renderer, Agent agents[N_AGENTS], scalar scores[N_AGENTS])
+static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
 {
-    for (int i = 0; i < N_AGENTS; ++i) {
-        scores[i] = 0;
-    }
+    int winner = 0;
+    Agent my_agents[2] = { agents[0], agents[1] };
+    my_agents[0].body.x = -START_DIST;
+    my_agents[0].body.y = 0;
+    my_agents[0].body.ang = 0;
+    my_agents[1].body.x = +START_DIST;
+    my_agents[1].body.y = 0;
+    my_agents[1].body.ang = PI;
     for (int t = 0; t < ROUND_DURATION; ++t) {
+        Uint32 ticks = SDL_GetTicks();
         SDL_Event event;
         if (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 return false;
         }
         if (renderer) {
-            SDL_Delay(20);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            for (int i = 0; i < N_AGENTS; ++i) {
-                draw_body(renderer, agents[i].body, RADIUS, 0.2, 512, 360);
+            for (int i = 0; i < 2; ++i) {
+                draw_body(renderer, my_agents[i].body, RADIUS, 0.2, 512, 360);
             }
             draw_circle(renderer, 512, 360, 4);
             draw_circle(renderer, 512, 360, START_DIST * 0.2);
-        }
-        for (int i = 0; i < N_AGENTS; ++i) {
-            agents[i].body.tick();
-        }
-        for (int i = 0; i < N_AGENTS; ++i) {
-            for (int j = 0; j < i; ++j) {
-                agents[i].consider_other(agents[j]);
-            }
-            for (int j = i + 1; j < N_AGENTS; ++j) {
-                agents[i].consider_other(agents[j]);
-            }
-        }
-        for (int i = 0; i < N_AGENTS; ++i) {
-            agents[i].act(1, 0.01);
-        }
-        for (int i = 0; i < N_AGENTS; ++i) {
-            for (int j = i + 1; j < N_AGENTS; ++j) {
-                agents[i].body.collide(agents[j].body, RADIUS);
-            }
-        }
-        for (int i = 0; i < N_AGENTS; ++i) {
-            scores[i]
-                += 1 / (1 + std::hypot(agents[i].body.x, agents[i].body.y));
-        }
-        if (renderer)
             SDL_RenderPresent(renderer);
+        }
+        for (int i = 0; i < 2; ++i) {
+            my_agents[i].body.tick();
+            my_agents[i].body.vel_x *= 0.98;
+            my_agents[i].body.vel_y *= 0.98;
+        }
+        for (int i = 0; i < 2; ++i) {
+            my_agents[i].act(my_agents[1 - i].body, 1, 0.1);
+#if 0
+            if (renderer)
+                printf("%d: %f\n", i, my_agents[i].memory[0]);
+            if (std::isnan(my_agents[i].body.vel_x)
+                || std::isnan(my_agents[i].body.vel_y)
+                || std::isnan(my_agents[i].body.ang)) {
+                if (renderer) {
+                    puts("NaN!");
+                    SDL_Delay(1000);
+                }
+                winner = 1 - i;
+                goto end;
+            }
+#endif
+        }
+        my_agents[0].body.collide(my_agents[1].body, RADIUS);
+        for (int i = 0; i < 2; ++i) {
+            if (std::hypot(my_agents[i].body.x, my_agents[i].body.y)
+                > START_DIST + RADIUS) {
+                winner = 1 - i;
+                goto end;
+            }
+        }
+        if (renderer) {
+            Uint32 new_ticks = SDL_GetTicks();
+            if (new_ticks - ticks < 20)
+                SDL_Delay(20 - (new_ticks - ticks));
+        }
     }
+    winner = std::hypot(my_agents[0].body.x, my_agents[0].body.y)
+            < std::hypot(my_agents[1].body.x, my_agents[1].body.y)
+        ? 0
+        : 1;
+end:
+    agents[1 - winner] = agents[winner];
     return true;
 }
 
 static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-0.15, 0.15);
-    auto mutate
-        = [&rand, &real_dis](scalar& w) mutable { w = +real_dis(rand); };
-    agent.self_brain.for_each_weight(mutate);
-    agent.other_brain.for_each_weight(mutate);
-}
-
-static void new_generation(
-    Agent agents[N_AGENTS], scalar scores[N_AGENTS], std::minstd_rand& rand)
-{
-    // Selection sort to find the parents.
-    for (int i = 0; i < N_PARENTS; ++i) {
-        for (int j = i + 1; j < N_AGENTS; ++j) {
-            if (scores[j] > scores[i]) {
-                std::swap(scores[i], scores[j]);
-                std::swap(agents[i], agents[j]);
-                break;
-            }
-        }
-    }
-    // Make babies.
-    for (int i = N_PARENTS; i < N_AGENTS; ++i) {
-        int parent_idx = i % N_PARENTS;
-        agents[i] = agents[parent_idx];
-    }
-    for (int i = 0; i < N_AGENTS; ++i) {
-        mutate_agent(agents[i], rand);
-    }
+    std::uniform_real_distribution<scalar> real_dis(-1, 1);
+    auto mutate = [&rand, &real_dis](scalar& w) mutable {
+        if (real_dis(rand) > 0.97)
+            w += real_dis(rand);
+    };
+    agent.brain.for_each_weight(mutate);
 }
 
 static void simulate(SDL_Renderer* renderer, unsigned seed)
@@ -177,14 +145,19 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     Agent agents[N_AGENTS];
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
-    for (long i = 0;; ++i) {
-        if (i % 10 == 0)
-            printf("Round %ld\n", i);
-        scalar scores[N_AGENTS];
-        place_agents(agents);
-        if (!do_round(i % 500 == 0 ? renderer : NULL, agents, scores))
-            return;
-        new_generation(agents, scores, rand);
+    for (long t = 0;; ++t) {
+        if (t % 10 == 0)
+            printf("Round %ld\n", t);
+        // TODO: parallelize
+        for (int i = 0; i < N_AGENTS; i += 2) {
+            SDL_Renderer* r = t % 500 == 0 && i == 0 ? renderer : NULL;
+            if (!breed_winner(r, agents + i))
+                return;
+        }
+        for (int i = 0; i < N_AGENTS; ++i) {
+            mutate_agent(agents[i], rand);
+        }
+        std::shuffle(agents, agents + N_AGENTS, rand);
     }
 }
 

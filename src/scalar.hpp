@@ -3,7 +3,7 @@
 
 namespace bouncers {
 
-typedef double scalar;
+typedef float scalar;
 
 } /* namespace bouncers */
 

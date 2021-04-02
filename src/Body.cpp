@@ -9,7 +9,7 @@ void Body::tick()
 {
     this->x += this->vel_x;
     this->y += this->vel_y;
-    this->ang = std::fmod(this->ang + this->vel_ang, TAU);
+    this->ang = std::fmod(this->ang, TAU);
 }
 
 bool Body::collide(Body& other, scalar radius)
@@ -36,8 +36,6 @@ bool Body::collide(Body& other, scalar radius)
         this->y -= correction_y;
         other.x += correction_x;
         other.y += correction_y;
-        // Collide angularly.
-        std::swap(this->vel_ang, other.vel_ang);
         return true;
     }
     return false;
