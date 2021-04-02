@@ -5,6 +5,9 @@
 
 namespace bouncers {
 
+// This might be wrong, but it's just an optimization.
+constexpr int CACHE_LINE_SIZE = 64;
+
 constexpr scalar PI = 3.14159265358979323846;
 
 constexpr scalar TAU = 2 * PI;

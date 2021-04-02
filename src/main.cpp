@@ -131,7 +131,10 @@ static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 
 static void simulate(SDL_Renderer* renderer, unsigned seed)
 {
-    Agent agents[N_AGENTS];
+    Agent* const agents = (Agent*)std::aligned_alloc(
+        alignof(Agent), N_AGENTS * sizeof(*agents));
+    if (!agents)
+        throw std::bad_alloc();
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
     bool keep_going = true;
@@ -141,16 +144,15 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         Agent visualized_agents[2] = { agents[0], agents[1] };
         int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
         std::thread threads[MAX_THREADS];
-        std::atomic<int> place(0);
-        auto thread_fun = [&agents, &place]() {
-            int i;
-            while ((i = place.fetch_add(2, std::memory_order_relaxed)) + 1
-                < N_AGENTS) {
-                breed_winner(NULL, agents + i);
-            }
-        };
+        alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
         for (int i = 0; i < n_threads; ++i) {
-            new (&threads[i]) std::thread(thread_fun);
+            new (&threads[i]) std::thread([agents, &place]() {
+                int i;
+                while ((i = place.fetch_add(2, std::memory_order_relaxed)) + 1
+                    < N_AGENTS) {
+                    breed_winner(NULL, agents + i);
+                }
+            });
         }
         if (t % 500 == 0) {
             keep_going = breed_winner(renderer, visualized_agents);
@@ -167,6 +169,7 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         }
         std::shuffle(agents, agents + N_AGENTS, rand);
     }
+    std::free(agents);
 }
 
 int main(int argc, char* argv[])
