@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <random>
 #include <thread>
@@ -137,7 +138,7 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     bool keep_going = true;
     for (long t = 0; keep_going; ++t) {
         if (t % 10 == 0)
-            printf("Round %ld\n", t);
+            std::printf("Round %ld\n", t);
         Agent visualized_agents[2] = { agents[0], agents[1] };
         int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
         std::thread threads[MAX_THREADS];
@@ -174,19 +175,21 @@ int main(int argc, char* argv[])
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
-        fprintf(stderr, "SDL initialization failed; %s\n", SDL_GetError());
+        std::fprintf(stderr, "SDL initialization failed; %s\n", SDL_GetError());
         goto error_sdl_init;
     }
     window = SDL_CreateWindow("Bouncers", SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, 1024, 720,
         SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
-        fprintf(stderr, "SDL window creation failed; %s\n", SDL_GetError());
+        std::fprintf(
+            stderr, "SDL window creation failed; %s\n", SDL_GetError());
         goto error_create_window;
     }
     renderer = SDL_CreateRenderer(window, -1, 0);
     if (!renderer) {
-        fprintf(stderr, "SDL renderer creation failed; %s\n", SDL_GetError());
+        std::fprintf(
+            stderr, "SDL renderer creation failed; %s\n", SDL_GetError());
         goto error_create_surface;
     }
     simulate(renderer, argc >= 2 ? (unsigned)atoi(argv[1]) : 1337U);
