@@ -52,16 +52,6 @@ void Agent::act(Body& self, Body other, scalar straight_acc, scalar turn_speed)
 {
     scalar in[Agent::BRAIN_IN], out[Agent::BRAIN_OUT];
 
-#if 0
-    for (int i = 0; i < Agent::MEMORY_SIZE; ++i) {
-        static const scalar MAX_MAG = 1e10;
-        if (this->memory[i] > MAX_MAG) {
-            this->memory[i] = MAX_MAG;
-        } else if (this->memory[i] < -MAX_MAG) {
-            this->memory[i] = -MAX_MAG;
-        }
-    }
-#endif
     // Put the offset from the origin in the input.
     PolarCoord offset = get_polar_pos(self, 0, 0);
     in[0] = offset.ang;
