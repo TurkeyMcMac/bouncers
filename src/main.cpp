@@ -62,9 +62,13 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
     Body bodies[2];
     bodies[0].x = -START_DIST;
     bodies[0].y = 0;
+    bodies[0].vel_x = 0;
+    bodies[0].vel_y = 0;
     bodies[0].ang = 0;
     bodies[1].x = +START_DIST;
     bodies[1].y = 0;
+    bodies[1].vel_x = 0;
+    bodies[1].vel_y = 0;
     bodies[1].ang = PI;
     for (int t = 0; t < ROUND_DURATION; ++t) {
         Uint32 ticks = 0;
