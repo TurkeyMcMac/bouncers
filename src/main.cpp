@@ -52,11 +52,6 @@ static void make_random_agents(Agent agents[N_AGENTS], std::minstd_rand& rand)
         = [&rand, &real_dis](scalar& w) mutable { w = real_dis(rand); };
     for (int i = 0; i < N_AGENTS; ++i) {
         agents[i].brain.for_each_weight(randomize);
-        agents[i].body.x = 0;
-        agents[i].body.y = 0;
-        agents[i].body.vel_x = 0;
-        agents[i].body.vel_y = 0;
-        agents[i].body.ang = 0;
     }
 }
 
@@ -64,12 +59,13 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
 {
     int winner = 0;
     Agent my_agents[2] = { agents[0], agents[1] };
-    my_agents[0].body.x = -START_DIST;
-    my_agents[0].body.y = 0;
-    my_agents[0].body.ang = 0;
-    my_agents[1].body.x = +START_DIST;
-    my_agents[1].body.y = 0;
-    my_agents[1].body.ang = PI;
+    Body bodies[2];
+    bodies[0].x = -START_DIST;
+    bodies[0].y = 0;
+    bodies[0].ang = 0;
+    bodies[1].x = +START_DIST;
+    bodies[1].y = 0;
+    bodies[1].ang = PI;
     for (int t = 0; t < ROUND_DURATION; ++t) {
         Uint32 ticks = 0;
         if (renderer) {
@@ -83,24 +79,23 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             for (int i = 0; i < 2; ++i) {
-                draw_body(renderer, my_agents[i].body, RADIUS, 0.2, 512, 360);
+                draw_body(renderer, bodies[i], RADIUS, 0.2, 512, 360);
             }
             draw_circle(renderer, 512, 360, 4);
             draw_circle(renderer, 512, 360, START_DIST * 0.2);
             SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < 2; ++i) {
-            my_agents[i].body.tick();
-            my_agents[i].body.vel_x *= 0.98;
-            my_agents[i].body.vel_y *= 0.98;
+            bodies[i].tick();
+            bodies[i].vel_x *= 0.98;
+            bodies[i].vel_y *= 0.98;
         }
         for (int i = 0; i < 2; ++i) {
-            my_agents[i].act(my_agents[1 - i].body, 1, 0.1);
+            my_agents[i].act(bodies[i], bodies[1 - i], 1, 0.1);
         }
-        my_agents[0].body.collide(my_agents[1].body, RADIUS);
+        bodies[0].collide(bodies[1], RADIUS);
         for (int i = 0; i < 2; ++i) {
-            if (std::hypot(my_agents[i].body.x, my_agents[i].body.y)
-                > START_DIST + RADIUS) {
+            if (std::hypot(bodies[i].x, bodies[i].y) > START_DIST + RADIUS) {
                 winner = 1 - i;
                 goto end;
             }
@@ -111,8 +106,8 @@ static bool breed_winner(SDL_Renderer* renderer, Agent agents[2])
                 SDL_Delay(20 - (new_ticks - ticks));
         }
     }
-    winner = std::hypot(my_agents[0].body.x, my_agents[0].body.y)
-            < std::hypot(my_agents[1].body.x, my_agents[1].body.y)
+    winner = std::hypot(bodies[0].x, bodies[0].y)
+            < std::hypot(bodies[1].x, bodies[1].y)
         ? 0
         : 1;
 end:

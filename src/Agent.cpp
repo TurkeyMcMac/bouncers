@@ -48,7 +48,7 @@ static scalar sigmoid(scalar x)
     }
 }
 
-void Agent::act(Body other, scalar forward_speed, scalar turn_speed)
+void Agent::act(Body& self, Body other, scalar straight_acc, scalar turn_speed)
 {
     scalar in[Agent::BRAIN_IN], out[Agent::BRAIN_OUT];
 
@@ -63,34 +63,34 @@ void Agent::act(Body other, scalar forward_speed, scalar turn_speed)
     }
 #endif
     // Put the offset from the origin in the input.
-    PolarCoord offset = get_polar_pos(this->body, 0, 0);
+    PolarCoord offset = get_polar_pos(self, 0, 0);
     in[0] = offset.ang;
     in[1] = offset.dist;
     // Put the velocity relative to the origin in the input.
-    scalar origin_rel_vel_x = 0 - this->body.vel_x;
-    scalar origin_rel_vel_y = 0 - this->body.vel_y;
+    scalar origin_rel_vel_x = 0 - self.vel_x;
+    scalar origin_rel_vel_y = 0 - self.vel_y;
     in[2] = clamp_angle(
-        std::atan2(origin_rel_vel_y, origin_rel_vel_x) - this->body.ang);
+        std::atan2(origin_rel_vel_y, origin_rel_vel_x) - self.ang);
     in[3] = std::hypot(origin_rel_vel_x, origin_rel_vel_y);
     // Put the relative position in the input.
-    PolarCoord other_pos = get_polar_pos(this->body, other.x, other.y);
+    PolarCoord other_pos = get_polar_pos(self, other.x, other.y);
     in[4] = other_pos.ang;
     in[5] = other_pos.dist;
     // Put the relative velocity in the input.
-    scalar rel_vel_x = other.vel_x - this->body.vel_x;
-    scalar rel_vel_y = other.vel_y - this->body.vel_y;
-    in[6] = clamp_angle(std::atan2(rel_vel_y, rel_vel_x) - this->body.ang);
+    scalar rel_vel_x = other.vel_x - self.vel_x;
+    scalar rel_vel_y = other.vel_y - self.vel_y;
+    in[6] = clamp_angle(std::atan2(rel_vel_y, rel_vel_x) - self.ang);
     in[7] = std::hypot(rel_vel_x, rel_vel_y);
     // Put the relative angle in the input.
-    in[8] = clamp_angle(other.ang - this->body.ang);
+    in[8] = clamp_angle(other.ang - self.ang);
 
     // Compute.
     this->brain.compute(in, out);
     // Move.
     scalar out_forward = out[0];
     scalar out_turn = out[1];
-    scalar forward = sigmoid(out_forward) * forward_speed * 2 - forward_speed;
-    this->body.vel_x += std::cos(this->body.ang) * forward;
-    this->body.vel_y += std::sin(this->body.ang) * forward;
-    this->body.ang += sigmoid(out_turn) * turn_speed * 2 - turn_speed;
+    scalar forward = sigmoid(out_forward) * straight_acc * 2 - straight_acc;
+    self.vel_x += std::cos(self.ang) * forward;
+    self.vel_y += std::sin(self.ang) * forward;
+    self.ang += sigmoid(out_turn) * turn_speed * 2 - turn_speed;
 }

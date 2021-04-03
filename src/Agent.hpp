@@ -14,9 +14,8 @@ struct alignas(CACHE_LINE_SIZE) Agent {
     static constexpr int BRAIN_OUT = 2;
 
     Network<BRAIN_IN, BRAIN_MID, BRAIN_OUT> brain;
-    Body body;
 
-    void act(Body other, scalar forward_speed, scalar turn_speed);
+    void act(Body& self, Body other, scalar straight_acc, scalar turn_speed);
 };
 
 } /* namespace bouncers */
