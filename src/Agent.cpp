@@ -24,7 +24,7 @@ static scalar clamp_angle(scalar ang)
     return ang;
 }
 
-static PolarCoord get_polar_pos(const Body& body, scalar x, scalar y)
+static PolarCoord get_polar_pos(Body body, scalar x, scalar y)
 {
     scalar rel_x = x - body.x;
     scalar rel_y = y - body.y;
