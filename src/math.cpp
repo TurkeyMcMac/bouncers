@@ -1,9 +1,9 @@
 #include "math.hpp"
 #include <cmath>
 
-using namespace bouncers;
+namespace bouncers {
 
-scalar bouncers::sigmoid(scalar x)
+scalar sigmoid(scalar x)
 {
     // Only small x values are passed to the function, to prevent overflow.
     if (x > 15) {
@@ -15,3 +15,5 @@ scalar bouncers::sigmoid(scalar x)
         return exp / (exp + 1);
     }
 }
+
+} /* namespace bouncers */
