@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <random>
 #include <thread>
 
@@ -138,18 +137,11 @@ static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 
 static void simulate(SDL_Renderer* renderer, unsigned seed)
 {
-    AlignedAgent *agents, *agents_buf;
-    std::size_t agents_size = N_AGENTS * sizeof(AlignedAgent);
-    std::size_t agents_buf_size = agents_size + alignof(AlignedAgent);
-    agents_buf = (AlignedAgent*)std::malloc(agents_buf_size);
-    if (!agents_buf)
+    AlignedAgent* agents_buf;
+    AlignedAgent* agents = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent),
+        N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
+    if (!agents)
         throw std::bad_alloc();
-    agents = agents_buf;
-    if (!std::align(alignof(AlignedAgent), agents_size, (void*&)agents,
-            agents_buf_size)) {
-        std::free(agents_buf);
-        throw std::bad_alloc();
-    }
     int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
     std::thread* threads
         = (std::thread*)std::malloc(n_threads * sizeof(*threads));
