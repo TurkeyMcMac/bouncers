@@ -16,7 +16,7 @@ static const scalar RADIUS = 120;
 static const scalar START_DIST = 500;
 static const int N_AGENTS = 50;
 static const int ROUND_DURATION = 600;
-static const int MAX_THREADS = 128;
+static const int MAX_THREADS = N_AGENTS;
 
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
