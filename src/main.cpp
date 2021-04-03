@@ -135,8 +135,9 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     Agent agents[N_AGENTS];
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
+    int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
     std::thread* threads
-        = (std::thread*)std::malloc(MAX_THREADS * sizeof(*threads));
+        = (std::thread*)std::malloc(n_threads * sizeof(*threads));
     if (!threads)
         throw std::bad_alloc();
     bool keep_going = true;
@@ -144,7 +145,6 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         if (t % 10 == 0)
             std::printf("Round %ld\n", t);
         Agent visualized_agents[2] = { agents[0], agents[1] };
-        int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
         alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
         for (int i = 0; i < n_threads; ++i) {
             new (&threads[i]) std::thread([&agents, &place]() {
