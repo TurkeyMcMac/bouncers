@@ -162,7 +162,7 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
                 int j;
                 while ((j = place.fetch_add(2, std::memory_order_relaxed)) + 1
                     < N_AGENTS) {
-                    breed_winner(NULL, agents + j);
+                    breed_winner(nullptr, agents + j);
                 }
             });
         }
@@ -194,8 +194,8 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
 int main(int argc, char* argv[])
 {
     int status = EXIT_FAILURE;
-    SDL_Window* window = NULL;
-    SDL_Renderer* renderer = NULL;
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL initialization failed; %s\n", SDL_GetError());
         goto error_sdl_init;
