@@ -205,5 +205,5 @@ error_create_surface:
 error_create_window:
     SDL_Quit();
 error_sdl_init:
-    exit(status);
+    return status;
 }
