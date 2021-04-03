@@ -148,10 +148,10 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
         for (int i = 0; i < n_threads; ++i) {
             new (&threads[i]) std::thread([&agents, &place]() {
-                int i;
-                while ((i = place.fetch_add(2, std::memory_order_relaxed)) + 1
+                int j;
+                while ((j = place.fetch_add(2, std::memory_order_relaxed)) + 1
                     < N_AGENTS) {
-                    breed_winner(NULL, agents + i);
+                    breed_winner(NULL, agents + j);
                 }
             });
         }
