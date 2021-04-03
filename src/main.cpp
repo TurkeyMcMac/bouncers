@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <random>
 #include <thread>
 
@@ -137,14 +138,27 @@ static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 
 static void simulate(SDL_Renderer* renderer, unsigned seed)
 {
-    AlignedAgent agents[N_AGENTS];
-    std::minstd_rand rand(seed);
-    make_random_agents(agents, rand);
+    AlignedAgent *agents, *agents_buf;
+    std::size_t agents_size = N_AGENTS * sizeof(AlignedAgent);
+    std::size_t agents_buf_size = agents_size + alignof(AlignedAgent);
+    agents_buf = (AlignedAgent*)std::malloc(agents_buf_size);
+    if (!agents_buf)
+        throw std::bad_alloc();
+    agents = agents_buf;
+    if (!std::align(alignof(AlignedAgent), agents_size, (void*&)agents,
+            agents_buf_size)) {
+        std::free(agents_buf);
+        throw std::bad_alloc();
+    }
     int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
     std::thread* threads
         = (std::thread*)std::malloc(n_threads * sizeof(*threads));
-    if (!threads)
+    if (!threads) {
+        std::free(agents_buf);
         throw std::bad_alloc();
+    }
+    std::minstd_rand rand(seed);
+    make_random_agents(agents, rand);
     bool keep_going = true;
     for (long t = 0; keep_going; ++t) {
         if (t % 100 == 0)
@@ -182,6 +196,7 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
         std::shuffle(agents, agents + N_AGENTS, rand);
     }
     std::free(threads);
+    std::free(agents_buf);
 }
 
 int main(int argc, char* argv[])
