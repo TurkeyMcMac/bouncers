@@ -1,5 +1,5 @@
 #include "Agent.hpp"
-#include "constants.hpp"
+#include "math.hpp"
 #include <cmath>
 #include <cstring>
 
@@ -33,19 +33,6 @@ static PolarCoord get_polar_pos(Body body, scalar x, scalar y)
     if (coord.dist > 0)
         coord.ang = clamp_angle(std::atan2(rel_y, rel_x) - body.ang);
     return coord;
-}
-
-static scalar sigmoid(scalar x)
-{
-    // Only small x values are passed to the function, to prevent overflow.
-    if (x > 15) {
-        return 1;
-    } else if (x < -15) {
-        return 0;
-    } else {
-        scalar exp = std::exp(x);
-        return exp / (exp + 1);
-    }
 }
 
 void Agent::act(Body& self, Body other, scalar straight_acc, scalar turn_speed)

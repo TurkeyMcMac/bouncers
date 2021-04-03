@@ -1,5 +1,6 @@
 #include "Agent.hpp"
-#include "constants.hpp"
+#include "align.hpp"
+#include "math.hpp"
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
 #include <algorithm>
