@@ -3,6 +3,7 @@
 #include "conf.hpp"
 #include "math.hpp"
 #include "scalar.hpp"
+#include "score.hpp"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <atomic>
@@ -57,8 +58,8 @@ static void make_random_agents(
 
 static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
 {
-    int winner = 0;
     Agent my_agents[2] = { agents[0].a, agents[1].a };
+    scalar scores[2] = { 0, 0 };
     Body bodies[2];
     bodies[0].x = -conf::START_DIST;
     bodies[0].y = 0;
@@ -70,7 +71,8 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
     bodies[1].vel_x = 0;
     bodies[1].vel_y = 0;
     bodies[1].ang = PI;
-    for (int t = 0; t < conf::MAX_DURATION; ++t) {
+    int t;
+    for (t = 0; t < conf::MAX_DURATION; ++t) {
         Uint32 ticks = 0;
         if (renderer) {
             ticks = SDL_GetTicks();
@@ -107,26 +109,23 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             bodies[0], bodies[1], conf::STRAIGHT_ACC, conf::TURN_SPEED);
         my_agents[1].act(
             bodies[1], old_body_0, conf::STRAIGHT_ACC, conf::TURN_SPEED);
-        bodies[0].collide(bodies[1], conf::RADIUS);
-        for (int i = 0; i < 2; ++i) {
-            if (std::hypot(bodies[i].x, bodies[i].y)
-                > conf::START_DIST + conf::RADIUS) {
-                winner = 1 - i;
-                goto end;
-            }
-        }
+        if (bodies[0].collide(bodies[1], conf::RADIUS)
+            && score::after_collision(t, bodies, scores))
+            break;
+        if (score::after_tick(t, bodies, scores))
+            break;
         if (renderer) {
             Uint32 new_ticks = SDL_GetTicks();
             if (new_ticks - ticks < (Uint32)conf::FRAME_TIME)
                 SDL_Delay(conf::FRAME_TIME - (new_ticks - ticks));
         }
     }
-    winner = std::hypot(bodies[0].x, bodies[0].y)
-            < std::hypot(bodies[1].x, bodies[1].y)
-        ? 0
-        : 1;
-end:
-    agents[1 - winner] = agents[winner];
+    score::before_end(t, bodies, scores);
+    if (scores[0] > scores[1]) {
+        agents[1] = agents[0];
+    } else {
+        agents[0] = agents[1];
+    }
     return true;
 }
 
