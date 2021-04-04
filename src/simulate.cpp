@@ -68,7 +68,7 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
         if (renderer) {
             ticks = SDL_GetTicks();
             SDL_Event event;
-            if (SDL_PollEvent(&event)) {
+            while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT)
                     return false;
             }
@@ -152,31 +152,41 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
     }
     std::minstd_rand rand(seed);
     make_random_agents(agents, rand);
+    bool running = true;
     bool keep_going = true;
-    for (long t = 0; keep_going; ++t) {
+    for (long t = 0; keep_going; t += running) {
+        bool running_next_time = running;
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
-        alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
-        for (int i = 0; i < n_threads; ++i) {
-            new (&threads[i]) std::thread([&agents, &place]() {
-                int j;
-                while ((j = place.fetch_add(2, std::memory_order_relaxed)) + 1
-                    < conf::N_AGENTS) {
-                    breed_winner(nullptr, agents + j);
-                }
-            });
+        if (running) {
+            alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
+            for (int i = 0; i < n_threads; ++i) {
+                new (&threads[i]) std::thread([&agents, &place]() {
+                    int j;
+                    while (
+                        (j = place.fetch_add(2, std::memory_order_relaxed)) + 1
+                        < conf::N_AGENTS) {
+                        breed_winner(nullptr, agents + j);
+                    }
+                });
+            }
         }
         long since_count = t % (long)conf::GEN_COUNT_INTERVAL;
-        bool redraw = since_count == 0;
+        bool redraw = since_count == 0 && running;
+        bool show_breeding = false;
         SDL_Event event;
-        if (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event)) {
             switch (event.type) {
             case SDL_QUIT:
                 keep_going = false;
                 break;
             case SDL_KEYUP:
-                if (event.key.keysym.sym == SDLK_SPACE) {
-                    keep_going = breed_winner(renderer, visualized_agents);
-                    redraw = true;
+                switch (event.key.keysym.sym) {
+                case SDLK_RETURN:
+                    show_breeding = true;
+                    break;
+                case SDLK_SPACE:
+                    running_next_time = !running;
+                    break;
                 }
                 break;
             case SDL_WINDOWEVENT:
@@ -186,6 +196,10 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
                     || event.window.event == SDL_WINDOWEVENT_RESIZED;
                 break;
             }
+        }
+        if (show_breeding) {
+            keep_going = breed_winner(renderer, visualized_agents);
+            redraw = true;
         }
         if (redraw) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -197,14 +211,19 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
                 renderer, t - since_count, 0, 0, viewport.w, viewport.h);
             SDL_RenderPresent(renderer);
         }
-        for (int i = 0; i < n_threads; ++i) {
-            threads[i].join();
-            threads[i].~thread();
+        if (!running)
+            SDL_Delay(conf::FRAME_TIME);
+        if (running) {
+            for (int i = 0; i < n_threads; ++i) {
+                threads[i].join();
+                threads[i].~thread();
+            }
+            for (int i = 0; i < conf::N_AGENTS; ++i) {
+                mutate_agent(agents[i].a, rand);
+            }
+            std::shuffle(agents, agents + conf::N_AGENTS, rand);
         }
-        for (int i = 0; i < conf::N_AGENTS; ++i) {
-            mutate_agent(agents[i].a, rand);
-        }
-        std::shuffle(agents, agents + conf::N_AGENTS, rand);
+        running = running_next_time;
     }
     std::free(threads);
     std::free(agents_buf);
