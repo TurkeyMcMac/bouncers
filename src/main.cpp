@@ -79,14 +79,22 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
                 if (event.type == SDL_QUIT)
                     return false;
             }
+            SDL_Rect viewport;
+            SDL_RenderGetViewport(renderer, &viewport);
+            int screen_center_x = viewport.x + viewport.w / 2;
+            int screen_center_y = viewport.y + viewport.h / 2;
+            scalar scale
+                = std::min(viewport.w, viewport.h) / (conf::START_DIST * 2);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             for (int i = 0; i < 2; ++i) {
-                draw_body(renderer, bodies[i], conf::RADIUS, 0.2, 512, 360);
+                draw_body(renderer, bodies[i], conf::RADIUS, scale,
+                    screen_center_x, screen_center_y);
             }
-            draw_circle(renderer, 512, 360, 4);
-            draw_circle(renderer, 512, 360, conf::START_DIST * 0.2);
+            draw_circle(renderer, screen_center_x, screen_center_y, 1);
+            draw_circle(renderer, screen_center_x, screen_center_y,
+                conf::START_DIST * scale);
             SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < 2; ++i) {
@@ -166,16 +174,30 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
             });
         }
         SDL_Event event;
+        bool clear = false;
         if (SDL_PollEvent(&event)) {
             switch (event.type) {
             case SDL_QUIT:
                 keep_going = false;
                 break;
             case SDL_KEYUP:
-                if (event.key.keysym.sym == SDLK_SPACE)
+                if (event.key.keysym.sym == SDLK_SPACE) {
                     keep_going = breed_winner(renderer, visualized_agents);
+                    clear = true;
+                }
+                break;
+            case SDL_WINDOWEVENT:
+                clear = event.window.event == SDL_WINDOWEVENT_SHOWN
+                    || event.window.event == SDL_WINDOWEVENT_RESTORED
+                    || event.window.event == SDL_WINDOWEVENT_EXPOSED
+                    || event.window.event == SDL_WINDOWEVENT_RESIZED;
                 break;
             }
+        }
+        if (clear) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < n_threads; ++i) {
             threads[i].join();
@@ -200,8 +222,8 @@ int main(int argc, char* argv[])
         goto error_sdl_init;
     }
     window = SDL_CreateWindow("Bouncers", SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED, 1024, 720,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+        SDL_WINDOWPOS_CENTERED, conf::WINDOW_WIDTH, conf::WINDOW_HEIGHT,
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
         std::fprintf(
             stderr, "SDL window creation failed; %s\n", SDL_GetError());

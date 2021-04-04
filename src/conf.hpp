@@ -21,6 +21,8 @@ namespace conf {
     static constexpr scalar START_DIST = 500;
     static constexpr scalar STRAIGHT_ACC = 1;
     static constexpr scalar TURN_SPEED = 0.1;
+    static constexpr int WINDOW_WIDTH = 200;
+    static constexpr int WINDOW_HEIGHT = 200;
 }
 
 } /* namespace bouncers */
