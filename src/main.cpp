@@ -1,6 +1,7 @@
 #include "Agent.hpp"
 #include "align.hpp"
 #include "conf.hpp"
+#include "drawing.hpp"
 #include "math.hpp"
 #include "scalar.hpp"
 #include "score.hpp"
@@ -18,19 +19,6 @@ using namespace bouncers;
 struct alignas(CACHE_LINE_SIZE) AlignedAgent {
     Agent a;
 };
-
-static void draw_circle(
-    SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
-{
-    SDL_Point points[conf::N_CIRCLE_POINTS];
-    for (int i = 0; i < conf::N_CIRCLE_POINTS - 1; ++i) {
-        scalar theta = TAU / (conf::N_CIRCLE_POINTS - 1) * i;
-        points[i].x = std::round(x + std::cos(theta) * radius);
-        points[i].y = std::round(y + std::sin(theta) * radius);
-    }
-    points[conf::N_CIRCLE_POINTS - 1] = points[0];
-    SDL_RenderDrawLines(renderer, points, conf::N_CIRCLE_POINTS);
-}
 
 static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
     scalar screen_scale, int screen_origin_x, int screen_origin_y)
@@ -97,6 +85,9 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             draw_circle(renderer, screen_center_x, screen_center_y, 1);
             draw_circle(renderer, screen_center_x, screen_center_y,
                 conf::START_DIST * scale);
+            int number_dim = conf::START_DIST * (1 - 1 / std::sqrt(2)) * scale;
+            draw_number(
+                renderer, conf::MAX_DURATION - t, 0, 0, number_dim, number_dim);
             SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < 2; ++i) {
@@ -159,8 +150,6 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     make_random_agents(agents, rand);
     bool keep_going = true;
     for (long t = 0; keep_going; ++t) {
-        if (t % (long)conf::GEN_COUNT_INTERVAL == 0)
-            std::printf("Generation %ld\n", t);
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
         alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
         for (int i = 0; i < n_threads; ++i) {
@@ -172,8 +161,9 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
                 }
             });
         }
+        long since_count = t % (long)conf::GEN_COUNT_INTERVAL;
+        bool redraw = since_count == 0;
         SDL_Event event;
-        bool clear = false;
         if (SDL_PollEvent(&event)) {
             switch (event.type) {
             case SDL_QUIT:
@@ -182,20 +172,25 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
             case SDL_KEYUP:
                 if (event.key.keysym.sym == SDLK_SPACE) {
                     keep_going = breed_winner(renderer, visualized_agents);
-                    clear = true;
+                    redraw = true;
                 }
                 break;
             case SDL_WINDOWEVENT:
-                clear = event.window.event == SDL_WINDOWEVENT_SHOWN
+                redraw = redraw || event.window.event == SDL_WINDOWEVENT_SHOWN
                     || event.window.event == SDL_WINDOWEVENT_RESTORED
                     || event.window.event == SDL_WINDOWEVENT_EXPOSED
                     || event.window.event == SDL_WINDOWEVENT_RESIZED;
                 break;
             }
         }
-        if (clear) {
+        if (redraw) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
+            SDL_Rect viewport;
+            SDL_RenderGetViewport(renderer, &viewport);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            draw_number(
+                renderer, t - since_count, 0, 0, viewport.w, viewport.h);
             SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < n_threads; ++i) {

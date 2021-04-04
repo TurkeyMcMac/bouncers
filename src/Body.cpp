@@ -1,7 +1,7 @@
 #include "Body.hpp"
 #include "math.hpp"
+#include <algorithm>
 #include <cmath>
-#include <utility>
 
 using namespace bouncers;
 
