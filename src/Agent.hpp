@@ -9,13 +9,14 @@
 namespace bouncers {
 
 struct Agent {
-    static constexpr int BRAIN_IN = 2 + 2 + 2 + 2 + 1;
+    static constexpr int BRAIN_IN = 2 + 2 + 2 + 2 + 1 + 1;
     static constexpr int BRAIN_MID = conf::N_MIDDLE_NEURONS;
     static constexpr int BRAIN_OUT = 2;
 
     Network<BRAIN_IN, BRAIN_MID, BRAIN_OUT> brain;
 
-    void act(Body& self, Body other, scalar straight_acc, scalar turn_speed);
+    void act(Body& self, Body other, scalar straight_acc, scalar turn_speed,
+        scalar time);
 };
 
 } /* namespace bouncers */

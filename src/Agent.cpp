@@ -35,7 +35,8 @@ static PolarCoord get_polar_pos(Body body, scalar x, scalar y)
     return coord;
 }
 
-void Agent::act(Body& self, Body other, scalar straight_acc, scalar turn_speed)
+void Agent::act(
+    Body& self, Body other, scalar straight_acc, scalar turn_speed, scalar time)
 {
     scalar in[Agent::BRAIN_IN], out[Agent::BRAIN_OUT];
 
@@ -60,6 +61,8 @@ void Agent::act(Body& self, Body other, scalar straight_acc, scalar turn_speed)
     in[7] = std::hypot(rel_vel_x, rel_vel_y);
     // Put the relative angle in the input.
     in[8] = clamp_angle(other.ang - self.ang);
+    // Put the time in the input.
+    in[9] = time;
 
     // Compute.
     this->brain.compute(in, out);

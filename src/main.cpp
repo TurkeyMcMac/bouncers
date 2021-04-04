@@ -106,9 +106,9 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
         }
         Body old_body_0 = bodies[0];
         my_agents[0].act(
-            bodies[0], bodies[1], conf::STRAIGHT_ACC, conf::TURN_SPEED);
+            bodies[0], bodies[1], conf::STRAIGHT_ACC, conf::TURN_SPEED, t);
         my_agents[1].act(
-            bodies[1], old_body_0, conf::STRAIGHT_ACC, conf::TURN_SPEED);
+            bodies[1], old_body_0, conf::STRAIGHT_ACC, conf::TURN_SPEED, t);
         if (bodies[0].collide(bodies[1], conf::RADIUS)
             && score::after_collision(t, bodies, scores))
             break;
