@@ -1,5 +1,6 @@
 #include "Agent.hpp"
 #include "align.hpp"
+#include "conf.hpp"
 #include "math.hpp"
 #include "scalar.hpp"
 #include <SDL2/SDL.h>
@@ -17,24 +18,17 @@ struct alignas(CACHE_LINE_SIZE) AlignedAgent {
     Agent a;
 };
 
-static const scalar RADIUS = 120;
-static const scalar START_DIST = 500;
-static const int N_AGENTS = 50;
-static const int ROUND_DURATION = 600;
-static const int MAX_THREADS = N_AGENTS / 2;
-
 static void draw_circle(
     SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
 {
-    static const int N_POINTS = 32;
-    SDL_Point points[N_POINTS];
-    for (int i = 0; i < N_POINTS - 1; ++i) {
-        scalar theta = TAU / (N_POINTS - 1) * i;
+    SDL_Point points[conf::N_CIRCLE_POINTS];
+    for (int i = 0; i < conf::N_CIRCLE_POINTS - 1; ++i) {
+        scalar theta = TAU / (conf::N_CIRCLE_POINTS - 1) * i;
         points[i].x = std::round(x + std::cos(theta) * radius);
         points[i].y = std::round(y + std::sin(theta) * radius);
     }
-    points[N_POINTS - 1] = points[0];
-    SDL_RenderDrawLines(renderer, points, N_POINTS);
+    points[conf::N_CIRCLE_POINTS - 1] = points[0];
+    SDL_RenderDrawLines(renderer, points, conf::N_CIRCLE_POINTS);
 }
 
 static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
@@ -51,12 +45,12 @@ static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
 }
 
 static void make_random_agents(
-    AlignedAgent agents[N_AGENTS], std::minstd_rand& rand)
+    AlignedAgent agents[conf::N_AGENTS], std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-0.1, 0.1);
-    auto randomize
-        = [&rand, &real_dis](scalar& w) mutable { w = real_dis(rand); };
-    for (int i = 0; i < N_AGENTS; ++i) {
+    std::uniform_real_distribution<scalar> dis(
+        -conf::INITIAL_VARIATION, conf::INITIAL_VARIATION);
+    auto randomize = [&rand, &dis](scalar& w) mutable { w = dis(rand); };
+    for (int i = 0; i < conf::N_AGENTS; ++i) {
         agents[i].a.brain.for_each_weight(randomize);
     }
 }
@@ -66,17 +60,17 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
     int winner = 0;
     Agent my_agents[2] = { agents[0].a, agents[1].a };
     Body bodies[2];
-    bodies[0].x = -START_DIST;
+    bodies[0].x = -conf::START_DIST;
     bodies[0].y = 0;
     bodies[0].vel_x = 0;
     bodies[0].vel_y = 0;
     bodies[0].ang = 0;
-    bodies[1].x = +START_DIST;
+    bodies[1].x = +conf::START_DIST;
     bodies[1].y = 0;
     bodies[1].vel_x = 0;
     bodies[1].vel_y = 0;
     bodies[1].ang = PI;
-    for (int t = 0; t < ROUND_DURATION; ++t) {
+    for (int t = 0; t < conf::MAX_DURATION; ++t) {
         Uint32 ticks = 0;
         if (renderer) {
             ticks = SDL_GetTicks();
@@ -89,31 +83,34 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             for (int i = 0; i < 2; ++i) {
-                draw_body(renderer, bodies[i], RADIUS, 0.2, 512, 360);
+                draw_body(renderer, bodies[i], conf::RADIUS, 0.2, 512, 360);
             }
             draw_circle(renderer, 512, 360, 4);
-            draw_circle(renderer, 512, 360, START_DIST * 0.2);
+            draw_circle(renderer, 512, 360, conf::START_DIST * 0.2);
             SDL_RenderPresent(renderer);
         }
         for (int i = 0; i < 2; ++i) {
             bodies[i].tick();
-            bodies[i].vel_x *= 0.98;
-            bodies[i].vel_y *= 0.98;
+            bodies[i].vel_x *= 1 - conf::DRAG;
+            bodies[i].vel_y *= 1 - conf::DRAG;
         }
         Body old_body_0 = bodies[0];
-        my_agents[0].act(bodies[0], bodies[1], 1, 0.1);
-        my_agents[1].act(bodies[1], old_body_0, 1, 0.1);
-        bodies[0].collide(bodies[1], RADIUS);
+        my_agents[0].act(
+            bodies[0], bodies[1], conf::STRAIGHT_ACC, conf::TURN_SPEED);
+        my_agents[1].act(
+            bodies[1], old_body_0, conf::STRAIGHT_ACC, conf::TURN_SPEED);
+        bodies[0].collide(bodies[1], conf::RADIUS);
         for (int i = 0; i < 2; ++i) {
-            if (std::hypot(bodies[i].x, bodies[i].y) > START_DIST + RADIUS) {
+            if (std::hypot(bodies[i].x, bodies[i].y)
+                > conf::START_DIST + conf::RADIUS) {
                 winner = 1 - i;
                 goto end;
             }
         }
         if (renderer) {
             Uint32 new_ticks = SDL_GetTicks();
-            if (new_ticks - ticks < 20)
-                SDL_Delay(20 - (new_ticks - ticks));
+            if (new_ticks - ticks < (Uint32)conf::FRAME_TIME)
+                SDL_Delay(conf::FRAME_TIME - (new_ticks - ticks));
         }
     }
     winner = std::hypot(bodies[0].x, bodies[0].y)
@@ -127,10 +124,12 @@ end:
 
 static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 {
-    std::uniform_real_distribution<scalar> real_dis(-1, 1);
-    auto mutate = [&rand, &real_dis](scalar& w) mutable {
-        if (real_dis(rand) > 0.97)
-            w += real_dis(rand);
+    static const scalar MUTATION_THRESHOLD
+        = conf::MUTATION * (1 - conf::MUTATION_CHANCE * 2);
+    std::uniform_real_distribution<scalar> dis(-conf::MUTATION, conf::MUTATION);
+    auto mutate = [&rand, &dis](scalar& w) mutable {
+        if (dis(rand) > MUTATION_THRESHOLD)
+            w += dis(rand);
     };
     agent.brain.for_each_weight(mutate);
 }
@@ -139,10 +138,10 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
 {
     AlignedAgent* agents_buf;
     AlignedAgent* agents = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent),
-        N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
+        conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
     if (!agents)
         throw std::bad_alloc();
-    int n_threads = std::min(SDL_GetCPUCount(), MAX_THREADS);
+    int n_threads = std::min(SDL_GetCPUCount(), conf::MAX_THREADS);
     std::thread* threads
         = (std::thread*)std::malloc(n_threads * sizeof(*threads));
     if (!threads) {
@@ -153,15 +152,15 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
     make_random_agents(agents, rand);
     bool keep_going = true;
     for (long t = 0; keep_going; ++t) {
-        if (t % 100 == 0)
-            std::printf("Round %ld\n", t);
+        if (t % (long)conf::GEN_COUNT_INTERVAL == 0)
+            std::printf("Generation %ld\n", t);
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
         alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
         for (int i = 0; i < n_threads; ++i) {
             new (&threads[i]) std::thread([&agents, &place]() {
                 int j;
                 while ((j = place.fetch_add(2, std::memory_order_relaxed)) + 1
-                    < N_AGENTS) {
+                    < conf::N_AGENTS) {
                     breed_winner(nullptr, agents + j);
                 }
             });
@@ -182,10 +181,10 @@ static void simulate(SDL_Renderer* renderer, unsigned seed)
             threads[i].join();
             threads[i].~thread();
         }
-        for (int i = 0; i < N_AGENTS; ++i) {
+        for (int i = 0; i < conf::N_AGENTS; ++i) {
             mutate_agent(agents[i].a, rand);
         }
-        std::shuffle(agents, agents + N_AGENTS, rand);
+        std::shuffle(agents, agents + conf::N_AGENTS, rand);
     }
     std::free(threads);
     std::free(agents_buf);
