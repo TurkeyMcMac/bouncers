@@ -88,7 +88,8 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             draw_circle(renderer, screen_center_x, screen_center_y, 1);
             draw_circle(renderer, screen_center_x, screen_center_y,
                 conf::START_DIST * scale);
-            int number_dim = conf::START_DIST * (1 - 1 / std::sqrt(2)) * scale;
+            scalar number_dim
+                = conf::START_DIST * (1 - 1 / std::sqrt(2)) * scale;
             draw_number(
                 renderer, conf::MAX_DURATION - t, 0, 0, number_dim, number_dim);
             SDL_RenderPresent(renderer);
