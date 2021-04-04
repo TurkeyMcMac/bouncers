@@ -38,8 +38,8 @@ namespace score {
         if (time >= conf::MAX_DURATION) {
             int winner = std::hypot(bodies[0].x, bodies[0].y)
                     < std::hypot(bodies[1].x, bodies[1].y)
-                ? 0
-                : 1;
+                ? 1
+                : 0;
             scores[winner] = 1;
         }
     }
