@@ -58,10 +58,10 @@ void draw_digit(SDL_Renderer* renderer, int digit, scalar x, scalar y,
     }
 }
 
-void draw_number(SDL_Renderer* renderer, int n, scalar x, scalar y,
+void draw_number(SDL_Renderer* renderer, long n, scalar x, scalar y,
     scalar width, scalar height)
 {
-    int digits = std::ceil(std::log10((double)std::max(n, 1) + 1));
+    int digits = std::ceil(std::log10((double)std::max(n, 1L) + 1));
     int x_div = digits * 2 + 1;
     scalar max_div_x = (scalar)width / x_div;
     scalar max_div_y = (scalar)height / 4;

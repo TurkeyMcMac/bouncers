@@ -11,7 +11,7 @@ void draw_circle(SDL_Renderer* renderer, scalar x, scalar y, scalar radius);
 void draw_digit(SDL_Renderer* renderer, int digit, scalar x, scalar y,
     scalar width, scalar height);
 
-void draw_number(SDL_Renderer* renderer, int n, scalar x, scalar y,
+void draw_number(SDL_Renderer* renderer, long n, scalar x, scalar y,
     scalar width, scalar height);
 
 } /* namespace bouncers */
