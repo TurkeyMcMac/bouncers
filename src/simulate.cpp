@@ -19,7 +19,8 @@
 
 namespace bouncers {
 
-struct alignas(CACHE_LINE_SIZE) AlignedAgent {
+struct alignas(
+    std::max(THREAD_SEP_ALIGN / 2, (int)alignof(Agent))) AlignedAgent {
     Agent a;
 };
 
@@ -140,7 +141,7 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
 {
     AlignedAgent* agents_buf;
     AlignedAgent* const agents
-        = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent),
+        = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent) * 2,
             conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
     if (!agents)
         throw std::bad_alloc();
@@ -159,7 +160,7 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
         bool running_next_time = running;
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
         if (running) {
-            alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
+            alignas(THREAD_SEP_ALIGN) std::atomic<int> place(0);
             for (int i = 0; i < n_threads; ++i) {
                 new (&threads[i]) std::thread([agents, &place]() {
                     int j;
