@@ -139,8 +139,9 @@ static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 void simulate(SDL_Renderer* renderer, unsigned long seed)
 {
     AlignedAgent* agents_buf;
-    AlignedAgent* agents = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent),
-        conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
+    AlignedAgent* const agents
+        = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent),
+            conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
     if (!agents)
         throw std::bad_alloc();
     int n_threads = std::min(SDL_GetCPUCount(), conf::MAX_THREADS);
@@ -160,7 +161,7 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
         if (running) {
             alignas(CACHE_LINE_SIZE) std::atomic<int> place(0);
             for (int i = 0; i < n_threads; ++i) {
-                new (&threads[i]) std::thread([&agents, &place]() {
+                new (&threads[i]) std::thread([agents, &place]() {
                     int j;
                     while (
                         (j = place.fetch_add(2, std::memory_order_relaxed)) + 1
