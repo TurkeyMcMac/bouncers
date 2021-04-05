@@ -5,15 +5,11 @@ namespace bouncers {
 
 scalar clamp_angle(scalar ang)
 {
-    // TODO: Is there a better way to do this?
+    ang = std::fmod(ang, TAU);
     if (ang > PI) {
-        do {
-            ang -= TAU;
-        } while (ang > PI);
+        ang -= TAU;
     } else if (ang < -PI) {
-        do {
-            ang += TAU;
-        } while (ang < -PI);
+        ang += TAU;
     }
     return ang;
 }
