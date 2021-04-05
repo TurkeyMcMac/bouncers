@@ -5,6 +5,7 @@
 
 namespace bouncers {
 
+// Runs the main simulation with the renderer and the given RNG seed.
 void simulate(SDL_Renderer* renderer, unsigned long seed);
 
 } /* namespace bouncers */

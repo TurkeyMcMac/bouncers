@@ -6,6 +6,8 @@
 
 namespace bouncers {
 
+// See score.cpp for an explanation of these functions.
+
 namespace score {
 
     bool after_collision(int time, Body bodies[2], scalar scores[2]);
