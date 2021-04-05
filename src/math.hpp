@@ -9,6 +9,14 @@ constexpr scalar PI = 3.14159265358979323846;
 
 constexpr scalar TAU = 2 * PI;
 
+struct PolarCoord {
+    scalar ang, dist;
+};
+
+scalar clamp_angle(scalar ang);
+
+PolarCoord polar_relative(scalar base_ang, scalar rel_x, scalar rel_y);
+
 scalar sigmoid(scalar x);
 
 } /* namespace bouncers */
