@@ -1,21 +1,28 @@
 #include "align.hpp"
-#include <cstdint>
 #include <cstdlib>
+#include <memory>
 
 namespace bouncers {
 
 void* aligned_alloc(std::size_t align, std::size_t size, void*& buf)
 {
-    buf = nullptr;
+    void* ptr;
     std::size_t buf_size = size + align;
     if (buf_size <= size)
-        return nullptr;
+        goto error;
     buf = std::malloc(buf_size);
     if (!buf)
-        return nullptr;
-    std::uintptr_t buf_addr = (std::uintptr_t)buf;
-    std::uintptr_t aligned_addr = (buf_addr + align - 1) & ~(align - 1);
-    return (void*)aligned_addr;
+        goto error;
+    ptr = buf;
+    if (!std::align(align, size, ptr, buf_size)) {
+        std::free(buf);
+        goto error;
+    }
+    return ptr;
+
+error:
+    buf = nullptr;
+    return nullptr;
 }
 
 } /* namespace bouncers */
