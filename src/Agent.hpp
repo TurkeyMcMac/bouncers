@@ -20,9 +20,10 @@ struct Agent {
     Network<BRAIN_IN, BRAIN_MID, BRAIN_OUT> brain;
 
     // Takes action (modifying the Body self) based on the position of the other
-    // and the time. straight_acc is the maximum magnitude of forward/backward
-    // acceleration and turn_speed is the maximum turn speed in radians. The
-    // Agent struct itself is not modified by this method.
+    // and the time (an quantity proportional to the time since the beginning.)
+    // straight_acc is the maximum magnitude of forward/backward acceleration
+    // and turn_speed is the maximum turn speed in radians. The Agent struct
+    // itself is not modified by this method.
     void act(Body& self, Body other, scalar time, scalar straight_acc,
         scalar turn_speed);
 };
