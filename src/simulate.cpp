@@ -82,10 +82,10 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            for (int i = 0; i < 2; ++i) {
-                draw_body(renderer, bodies[i], conf::RADIUS, scale,
-                    screen_center_x, screen_center_y);
-            }
+            draw_body(renderer, bodies[0], conf::RADIUS, scale, screen_center_x,
+                screen_center_y);
+            draw_body(renderer, bodies[1], conf::RADIUS, scale, screen_center_x,
+                screen_center_y);
             draw_circle(renderer, screen_center_x, screen_center_y, 1);
             draw_circle(renderer, screen_center_x, screen_center_y,
                 conf::START_DIST * scale);
@@ -95,11 +95,8 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
                 renderer, conf::MAX_DURATION - t, 0, 0, number_dim, number_dim);
             SDL_RenderPresent(renderer);
         }
-        for (int i = 0; i < 2; ++i) {
-            bodies[i].tick();
-            bodies[i].vel_x *= 1 - conf::DRAG;
-            bodies[i].vel_y *= 1 - conf::DRAG;
-        }
+        bodies[0].tick(conf::DRAG);
+        bodies[1].tick(conf::DRAG);
         Body old_body_0 = bodies[0];
         my_agents[0].act(
             bodies[0], bodies[1], conf::STRAIGHT_ACC, conf::TURN_SPEED, t);

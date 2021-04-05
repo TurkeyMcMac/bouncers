@@ -10,7 +10,7 @@ struct Body {
     scalar vel_x, vel_y;
     scalar ang;
 
-    void tick();
+    void tick(scalar drag);
 
     bool collide(Body& other, scalar radius);
 };

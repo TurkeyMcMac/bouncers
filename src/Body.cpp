@@ -5,10 +5,12 @@
 
 using namespace bouncers;
 
-void Body::tick()
+void Body::tick(scalar drag)
 {
     this->x += this->vel_x;
     this->y += this->vel_y;
+    this->vel_x *= 1 - drag;
+    this->vel_y *= 1 - drag;
     this->ang = std::fmod(this->ang, TAU);
 }
 
