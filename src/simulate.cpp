@@ -87,7 +87,7 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             // The scale is the conversion from simulation coordinates to
             // viewport coordinates.
             scalar scale
-                = std::min(viewport.w, viewport.h) / (conf::START_DIST * 2);
+                = std::min(viewport.w, viewport.h) / (conf::START_DIST * 4);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -101,8 +101,7 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
                 conf::START_DIST * scale);
             // number_dim is a width and height in screen coordinates that can
             // hold the time display without touching the ring drawn above.
-            scalar number_dim
-                = conf::START_DIST * (1 - 1 / std::sqrt(2)) * scale;
+            scalar number_dim = conf::START_DIST * scale;
             draw_number(
                 renderer, conf::MAX_DURATION - t, 0, 0, number_dim, number_dim);
             SDL_RenderPresent(renderer);
