@@ -15,8 +15,8 @@ struct Agent {
 
     Network<BRAIN_IN, BRAIN_MID, BRAIN_OUT> brain;
 
-    void act(Body& self, Body other, scalar straight_acc, scalar turn_speed,
-        scalar time);
+    void act(Body& self, Body other, scalar time, scalar straight_acc,
+        scalar turn_speed);
 };
 
 } /* namespace bouncers */

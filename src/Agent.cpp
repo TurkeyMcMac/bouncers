@@ -6,7 +6,7 @@
 using namespace bouncers;
 
 void Agent::act(
-    Body& self, Body other, scalar straight_acc, scalar turn_speed, scalar time)
+    Body& self, Body other, scalar time, scalar straight_acc, scalar turn_speed)
 {
     scalar in[Agent::BRAIN_IN], out[Agent::BRAIN_OUT];
 
