@@ -8,14 +8,14 @@ namespace bouncers {
 
 void draw_circle(SDL_Renderer* renderer, scalar x, scalar y, scalar radius)
 {
-    SDL_Point points[conf::N_CIRCLE_POINTS];
-    for (int i = 0; i < conf::N_CIRCLE_POINTS - 1; ++i) {
-        scalar theta = TAU / (conf::N_CIRCLE_POINTS - 1) * i;
+    SDL_Point points[conf::N_CIRCLE_POINTS + 1];
+    for (int i = 0; i < conf::N_CIRCLE_POINTS; ++i) {
+        scalar theta = TAU / conf::N_CIRCLE_POINTS * i;
         points[i].x = std::round(x + std::cos(theta) * radius);
         points[i].y = std::round(y + std::sin(theta) * radius);
     }
-    points[conf::N_CIRCLE_POINTS - 1] = points[0];
-    SDL_RenderDrawLines(renderer, points, conf::N_CIRCLE_POINTS);
+    points[conf::N_CIRCLE_POINTS] = points[0];
+    SDL_RenderDrawLines(renderer, points, conf::N_CIRCLE_POINTS + 1);
 }
 
 void draw_digit(SDL_Renderer* renderer, int digit, scalar x, scalar y,
