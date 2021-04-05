@@ -19,6 +19,10 @@
 
 namespace bouncers {
 
+// The AlignedAgent buffer is aligned to 2 * alignof(AlignedAgent), meaning it
+// is aligned to THREAD_SEP_ALIGN. An AlignedAgent can have an alignment less
+// than THREAD_SEP_ALIGN as long as an agent pair has an alignment of
+// THREAD_SEP_ALIGN to prevent false sharing.
 struct alignas(
     std::max(THREAD_SEP_ALIGN / 2, (int)alignof(Agent))) AlignedAgent {
     Agent a;
@@ -48,6 +52,9 @@ static void make_random_agents(
     }
 }
 
+// Runs a round. If a non-null renderer is given, the round will be animated.
+// false is returned when the user quits during the animation. When true is
+// returned, the winning agent is copied into the place that held the loser.
 static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
 {
     Agent my_agents[2] = { agents[0].a, agents[1].a };
@@ -77,6 +84,8 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             SDL_RenderGetViewport(renderer, &viewport);
             int screen_center_x = viewport.x + viewport.w / 2;
             int screen_center_y = viewport.y + viewport.h / 2;
+            // The scale is the conversion from simulation coordinates to
+            // viewport coordinates.
             scalar scale
                 = std::min(viewport.w, viewport.h) / (conf::START_DIST * 2);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -86,9 +95,12 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
                 screen_center_y);
             draw_body(renderer, bodies[1], conf::RADIUS, scale, screen_center_x,
                 screen_center_y);
+            // Draw the ring and a dot at its center.
             draw_circle(renderer, screen_center_x, screen_center_y, 1);
             draw_circle(renderer, screen_center_x, screen_center_y,
                 conf::START_DIST * scale);
+            // number_dim is a width and height in screen coordinates that can
+            // hold the time display without touching the ring drawn above.
             scalar number_dim
                 = conf::START_DIST * (1 - 1 / std::sqrt(2)) * scale;
             draw_number(
@@ -108,12 +120,14 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
         if (score::after_tick(t, bodies, scores))
             break;
         if (renderer) {
+            // Wait for the next simulation tick.
             Uint32 new_ticks = SDL_GetTicks();
             if (new_ticks - ticks < (Uint32)conf::FRAME_TIME)
                 SDL_Delay(conf::FRAME_TIME - (new_ticks - ticks));
         }
     }
     score::before_end(t, bodies, scores);
+    // Breed the winner.
     if (scores[0] > scores[1]) {
         agents[1] = agents[0];
     } else {
@@ -124,6 +138,7 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
 
 static void mutate_agent(Agent& agent, std::minstd_rand& rand)
 {
+    // The chance that dis(rand) > MUTATION_THRESHOLD is conf::MUTATION_CHANCE.
     static const scalar MUTATION_THRESHOLD
         = conf::MUTATION * (1 - conf::MUTATION_CHANCE * 2);
     std::uniform_real_distribution<scalar> dis(-conf::MUTATION, conf::MUTATION);
@@ -154,13 +169,18 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
     bool running = true;
     bool keep_going = true;
     for (long t = 0; keep_going; t += running) {
+        // The simulation keeps running/not running unless paused/unpaused.
         bool running_next_time = running;
+        // These agents are used when animating a round.
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
         if (running) {
+            // The threads coordinate which agents to simulate next using this
+            // atomic counter.
             alignas(THREAD_SEP_ALIGN) std::atomic<int> place(0);
             for (int i = 0; i < n_threads; ++i) {
                 new (&threads[i]) std::thread([agents, &place]() {
                     int j;
+                    // Keep taking pairs off the queue until none are left.
                     while (
                         (j = place.fetch_add(2, std::memory_order_relaxed)) + 1
                         < conf::N_AGENTS) {
@@ -181,9 +201,11 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {
                 case SDLK_RETURN:
+                    // Show an animated round.
                     show_breeding = true;
                     break;
                 case SDLK_SPACE:
+                    // (Un)pause.
                     running_next_time = !running;
                     break;
                 }
@@ -206,10 +228,13 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
             SDL_Rect viewport;
             SDL_RenderGetViewport(renderer, &viewport);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            // since_count is subtracted from the displayed time to round it
+            // down to the nearest multiple of conf::GEN_COUNT_INTERVAL.
             draw_number(
                 renderer, t - since_count, 0, 0, viewport.w, viewport.h);
             SDL_RenderPresent(renderer);
         }
+        // Prevent useless CPU spinning.
         if (!running)
             SDL_Delay(conf::FRAME_TIME);
         if (running) {
@@ -220,6 +245,7 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
             for (int i = 0; i < conf::N_AGENTS; ++i) {
                 mutate_agent(agents[i].a, rand);
             }
+            // The agents are shuffled to make new matchups next generation.
             std::shuffle(agents, agents + conf::N_AGENTS, rand);
         }
         running = running_next_time;
