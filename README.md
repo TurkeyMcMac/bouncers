@@ -17,7 +17,8 @@ choose a seed for itself.
 While the simulation is running, you will see an increasing number which is how
 many generations have passed. You can press SPACE to pause/unpause. Pressing
 ENTER animates one round for you. The agents are the moving circles, and the
-time remaining is shown in the top left.
+time remaining is shown in the top left. If an agent has a smaller circle inside
+its body, that means it has the higher score.
 
 ## Customization
 

@@ -29,12 +29,14 @@ struct alignas(
 };
 
 static void draw_body(SDL_Renderer* renderer, const Body& body, scalar radius,
-    scalar screen_scale, int screen_origin_x, int screen_origin_y)
+    bool winning, scalar screen_scale, int screen_origin_x, int screen_origin_y)
 {
     scalar screen_x = body.x * screen_scale + screen_origin_x;
     scalar screen_y = body.y * screen_scale + screen_origin_y;
     scalar screen_radius = radius * screen_scale;
     draw_circle(renderer, screen_x, screen_y, screen_radius);
+    if (winning)
+        draw_circle(renderer, screen_x, screen_y, screen_radius / 2);
     scalar screen_head_x = screen_x + std::cos(body.ang) * screen_radius;
     scalar screen_head_y = screen_y + std::sin(body.ang) * screen_radius;
     SDL_RenderDrawLine(renderer, std::round(screen_x), std::round(screen_y),
@@ -91,10 +93,10 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            draw_body(renderer, bodies[0], conf::RADIUS, scale, screen_center_x,
-                screen_center_y);
-            draw_body(renderer, bodies[1], conf::RADIUS, scale, screen_center_x,
-                screen_center_y);
+            draw_body(renderer, bodies[0], conf::RADIUS, scores[0] > scores[1],
+                scale, screen_center_x, screen_center_y);
+            draw_body(renderer, bodies[1], conf::RADIUS, scores[1] > scores[0],
+                scale, screen_center_x, screen_center_y);
             // Draw the ring and a dot at its center.
             draw_circle(renderer, screen_center_x, screen_center_y, 1);
             draw_circle(renderer, screen_center_x, screen_center_y,
