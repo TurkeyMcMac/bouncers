@@ -6,7 +6,7 @@ a two-dimensional physical environment.
 ## Building
 
 You can probably just run `make`, which produces an optimized build by default.
-You need a C++14 compiler and SDL2. The Makefile probably requires Unix.
+You need a C++11 compiler and SDL2. The Makefile probably requires Unix.
 
 ## User Interface
 

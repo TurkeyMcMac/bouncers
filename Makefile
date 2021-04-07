@@ -1,7 +1,7 @@
 exe = bouncers
 optimization = -O3 -flto -march=native
 CPPFLAGS = `sdl2-config --cflags`
-CXXFLAGS = $(optimization) -std=c++14 -Wall -Wextra -pedantic
+CXXFLAGS = $(optimization) -std=c++11 -Wall -Wextra -pedantic
 LDLIBS = `sdl2-config --libs` -lpthread
 
 CXX ?= c++

@@ -23,8 +23,7 @@ namespace bouncers {
 // is aligned to THREAD_SEP_ALIGN. An AlignedAgent can have an alignment less
 // than THREAD_SEP_ALIGN as long as an agent pair has an alignment of
 // THREAD_SEP_ALIGN to prevent false sharing.
-struct alignas(
-    std::max(THREAD_SEP_ALIGN / 2, (int)alignof(Agent))) AlignedAgent {
+struct alignas(max(THREAD_SEP_ALIGN / 2, (int)alignof(Agent))) AlignedAgent {
     Agent a;
 };
 
@@ -89,8 +88,7 @@ static bool breed_winner(SDL_Renderer* renderer, AlignedAgent agents[2])
             int screen_center_y = viewport.y + viewport.h / 2;
             // The scale is the conversion from simulation coordinates to
             // viewport coordinates.
-            scalar scale
-                = std::min(viewport.w, viewport.h) / (conf::START_DIST * 4);
+            scalar scale = min(viewport.w, viewport.h) / (conf::START_DIST * 4);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -159,7 +157,7 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
             conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
     if (!agents)
         throw std::bad_alloc();
-    int n_threads = std::min(SDL_GetCPUCount(), conf::MAX_THREADS);
+    int n_threads = min(SDL_GetCPUCount(), conf::MAX_THREADS);
     std::thread* threads
         = (std::thread*)std::malloc(n_threads * sizeof(*threads));
     if (!threads) {
