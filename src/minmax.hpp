@@ -1,8 +1,6 @@
 #ifndef BOUNCERS_MINMAX_H_
 #define BOUNCERS_MINMAX_H_
 
-#include "scalar.hpp"
-
 namespace bouncers {
 
 // These definitions work for this program.
