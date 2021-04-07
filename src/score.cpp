@@ -25,15 +25,18 @@ namespace score {
     // Runs after every tick. time < conf::MAX_DURATION.
     bool after_tick(int time, Body bodies[2], scalar scores[2])
     {
-        // By default, agents that get knocked out immediately lose.
+        // By default, agents get more points per tick the closer they are to
+        // the edge, but if they go past the edge, they lose.
         (void)time;
         for (int i = 0; i < 2; ++i) {
-            if (std::hypot(bodies[i].x, bodies[i].y)
-                > conf::START_DIST + conf::RADIUS) {
+            scalar dist = std::hypot(bodies[i].x, bodies[i].y);
+            if (dist > conf::START_DIST + conf::RADIUS) {
                 // This agent loses.
                 scores[i] = -1;
                 return true;
             }
+            // Score this tick scales with distance.
+            scores[i] += dist;
         }
         return false;
     }
@@ -43,15 +46,10 @@ namespace score {
     // time <= conf::MAX_DURATION.
     void before_end(int time, Body bodies[2], scalar scores[2])
     {
-        // By default, if the maximum duration is reached, the agent further
-        // from the center wins.
-        if (time >= conf::MAX_DURATION) {
-            int winner = std::hypot(bodies[0].x, bodies[0].y)
-                    < std::hypot(bodies[1].x, bodies[1].y)
-                ? 1
-                : 0;
-            scores[winner] = 1;
-        }
+        // By default, nothing is done here.
+        (void)time;
+        (void)bodies;
+        (void)scores;
     }
 
 }
