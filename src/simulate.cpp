@@ -50,6 +50,7 @@ static void make_random_agents(
         -conf::INITIAL_VARIATION, conf::INITIAL_VARIATION);
     auto randomize = [&rand, &dis](scalar& w) mutable { w = dis(rand); };
     for (int i = 0; i < conf::N_AGENTS; ++i) {
+        new (&agents[i]) AlignedAgent;
         agents[i].a.brain.for_each_weight(randomize);
     }
 }
