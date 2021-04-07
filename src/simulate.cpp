@@ -155,12 +155,11 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
     AlignedAgent* const agents
         = (AlignedAgent*)aligned_alloc(alignof(AlignedAgent) * 2,
             conf::N_AGENTS * sizeof(AlignedAgent), (void*&)agents_buf);
-    if (!agents)
-        throw std::bad_alloc();
     int n_threads = min(SDL_GetCPUCount(), conf::MAX_THREADS);
     std::thread* threads
         = (std::thread*)std::malloc(n_threads * sizeof(*threads));
-    if (!threads) {
+    if (!agents || !threads) {
+        std::free(threads);
         std::free(agents_buf);
         throw std::bad_alloc();
     }
