@@ -172,10 +172,10 @@ void simulate(SDL_Renderer* renderer, unsigned long seed)
         bool running_next_time = running;
         // These agents are used when animating a round.
         AlignedAgent visualized_agents[2] = { agents[0], agents[1] };
+        // The threads coordinate which agents to simulate next using this
+        // atomic counter.
+        alignas(THREAD_SEP_ALIGN) std::atomic<int> place(0);
         if (running) {
-            // The threads coordinate which agents to simulate next using this
-            // atomic counter.
-            alignas(THREAD_SEP_ALIGN) std::atomic<int> place(0);
             for (int i = 0; i < n_threads; ++i) {
                 new (&threads[i]) std::thread([agents, &place]() {
                     int j;
