@@ -12,9 +12,8 @@ template <int N_IN, int N_MID, int N_OUT> struct Network {
     scalar mid_weights[N_MID][N_IN];
     scalar out_weights[N_OUT][N_MID];
 
-    // Computes the output for the given input (without modifying the network
-    // in any way.)
-    void compute(const scalar in[N_IN], scalar out[N_OUT])
+    // Computes the output for the given input.
+    void compute(const scalar in[N_IN], scalar out[N_OUT]) const
     {
         scalar mid[N_MID];
         for (int i = 0; i < N_MID; ++i) {
