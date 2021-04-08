@@ -9,7 +9,7 @@ namespace conf {
     // The portion of agent velocity that evaporates per tick.
     static constexpr scalar DRAG = 0.02;
     // The minimum number of milliseconds between frames of an animated round.
-    static constexpr int FRAME_TIME = 20;
+    static constexpr int FRAME_TIME = 30;
     // The number of generations between updates to the on-screen count.
     static constexpr int GEN_COUNT_INTERVAL = 100;
     // The maximum value of an absolute weight in one of the initial randomly
