@@ -23,7 +23,7 @@ namespace conf {
     // The maximum absolute change in a weight when it is randomly mutated.
     static constexpr scalar MUTATION = 1;
     // The chance that any given weight will be mutated for the next generation.
-    static constexpr scalar MUTATION_CHANCE = 0.01;
+    static constexpr scalar MUTATION_CHANCE = 0.001;
     // The number of agents in each generation. If this is odd, then a random
     // agent will be the odd one out each generation, and will get to have one
     // child without a contest.
