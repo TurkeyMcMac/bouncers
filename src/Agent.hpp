@@ -13,7 +13,7 @@ namespace bouncers {
 // a neural network with a certain size that takes care of marshalling data from
 // the environment and applying the network's output to control a Body.
 struct Agent {
-    static constexpr int BRAIN_IN = 2 + 2 + 2 + 2 + 1 + 1;
+    static constexpr int BRAIN_IN = 2 + 2 + 2 + 2 + 1 + 1 + 1;
     static constexpr int BRAIN_MID = conf::N_MIDDLE_NEURONS;
     static constexpr int BRAIN_OUT = 2;
 

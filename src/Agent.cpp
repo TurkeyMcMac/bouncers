@@ -31,6 +31,8 @@ void Agent::act(Body& self, Body other, scalar time, scalar straight_acc,
     in[8] = clamp_angle(other.ang - self.ang);
     // Put the time in the input.
     in[9] = time;
+    // Put a fixed value in the input.
+    in[10] = 1;
 
     // Compute.
     this->brain.compute(in, out);
